@@ -14,6 +14,26 @@ If you run into problems
 make reset
 ```
 
+### The *Mindmachine* is a stateful Nostr *client* written in Go.
+
+1. **Participants** interact with the Mindmachine using **Nostr** Events. The Mindmachine subscribes to all Nostr event Kinds that it can handle, and attempts to update its state by processing them based on the rules in the **Stackerstan Superprotocolo**.
+
+2. If an Event successfully triggers the Mindmachine to change state, the Event ID is appended to a `Kind 640001` Nostr Event which the Mindmachine publishes once per Bitcoin block. The Mindmachine can rebuild anyone's state by subscribing to their `640001` events and replaying the list of Nostr Events contained within.
+
+3. Consensus is based on **Votepower**. When a Participant with `Votepower > 0` witnesses a new Mindmachine state, the Mindmachine hashes the state and publishes it in a `Kind 640000` Nostr Event. This is effectively a vote for the witnessed state at a particular Bitcoin height.
+
+4. A Mindmachine state is considered stable when >50% of total Votepower has signed the same state **and** there is a chain of signatures back to the **Ignition state**. There are mechanisms to deal with voters disappearing.
+
+5. Participants who have a lot of Votepower will want to be able to prove they had a certain Mind-state at a particular height. To do so, they broadcast a Bitcoin transaction containing an OP_RETURN of the state.
+
+6. To find the current state, the Mindmachine subscribes to `Kind 640001` Nostr events from pubkeys it **knows** has **Votepower** at the current working height (starting with a single pubkey at Block 761151).
+
+    1. We rebuild their Mindmachine state from their list of Nostr Events, verifying each against the Stackerstan Superprotocolo and referencing all OP_RETURNS. This becomes the starting point for repeating the process again (there could now be additional pubkeys that have votepower).
+
+    2. We continue this until we reach the current Bitcoin tip. Along the way, if our Mindmachine instance discovers a state where we now have Votepower, it starts producing `640000` events too.
+
+The Mindmachine state began at Block 761151.
+
 ### Contributing
 0. Have a Stackerstan account and be in the Identity Tree if you want to claim an expense for your Patch.
 1. Fork this github repository under your own github account.
