@@ -59,7 +59,7 @@ And then commit your changes:
 ```
 @: git commit -m 'problem: <70 characters describing the problem //do not close the '', press ENTER two (2) times
 >
->solution: short description of how you solved the problem.' //Now you can close the ''. Be sure to mention the issue number if there is one (e.g. #6)    
+>solution: short description of how you solved the problem.' //Now you can close the ''.    
 @: git push //this will send your changes to _your_ fork on Github
 ```    
 8. Go to your fork on Github and select the branch you just worked on. Click "pull request" to send a pull request back to the mindmachine repository.
