@@ -77,3 +77,4 @@ If you want to work on another problem while you are waiting for it to merge sim
 ```
 @: git checkout master
 ```
+After your pull request is merged, a Maintainer should grab the diff by going to the commit URL on github and appending `.diff`, and then copy this over to the Patch Chain at the appropriate height.
