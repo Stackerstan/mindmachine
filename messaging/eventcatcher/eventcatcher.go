@@ -51,8 +51,10 @@ func Start(terminate chan struct{}, wg *sync.WaitGroup) {
 			mindmachine.Shutdown()
 		}
 	}
-	catchUpOnBlocks()
-	go startEventSubscription()
+	go func() {
+		catchUpOnBlocks()
+		go startEventSubscription()
+	}()
 }
 
 var fetching bool
