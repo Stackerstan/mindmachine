@@ -1,5 +1,5 @@
 # Mindmachine
-A replicated state machine built on Nostr and Bitcoin
+A persistent and replicated _state machine_ built on Nostr and Bitcoin, following an open protocol that anyone can interact with. The _ignition state_ was instantiated at Block 761511, which marks the beginning of the experiment.
 
 ### Build and run
 This has only been tested on Linux and OSX. You need to have [Golang](https://go.dev/doc/install) installed on your system.
