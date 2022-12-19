@@ -42,10 +42,8 @@ func Start(terminate chan struct{}, wg *sync.WaitGroup) {
 	}
 	fetchEventPackLooper()
 	if blocksBehind() > 1 {
-		if shares.VotePowerForAccount(mindmachine.MyWallet().Account) > 0 {
-			if mindmachine.MakeOrGetConfig().GetBool("forceBlocks") {
-				catchUpOnBlocks()
-			}
+		if shares.VotePowerForAccount(mindmachine.MyWallet().Account) > 0 && mindmachine.MakeOrGetConfig().GetBool("forceBlocks") {
+			catchUpOnBlocks()
 		} else {
 			mindmachine.LogCLI("looks like the network has stalled and will require someone with Votepower > 0 to recover it. Check the Samizdat tree, telegram group, or try running again later.", 1)
 			mindmachine.Shutdown()
@@ -146,10 +144,9 @@ func fetchEventPack() {
 			accs = append(accs, account)
 		}
 		t := time.Now()
+		t = t.Add(-1 * time.Hour)
 		if shares.VotePowerForAccount(mindmachine.MyWallet().Account) > 0 {
-			t = t.Add(-168 * time.Hour)
-		} else {
-			t = t.Add(-1 * time.Hour)
+			//t = t.Add(-168 * time.Hour)
 		}
 		sub := pool.Sub(nostr.Filters{nostr.Filter{
 			Kinds:   nostr.IntList{640001},
