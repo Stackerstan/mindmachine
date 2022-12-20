@@ -101,9 +101,9 @@ func main() {
 	mindmachine.LogCLI("Waiting for terminate signal, press q to quit", 4)
 
 	// Minds are something like Actors in the Actor model https://en.wikipedia.org/wiki/Actor_model
-	// they have their own state ("Mind-state") and follow the BSP to update this state when they
+	// they have their own state ("Mind-state") and follow the SSP to update this state when they
 	// receive a Nostr Event (https://github.com/nostr-protocol/nostr).
-	startMinds(terminator, wg, conf)
+	go startMinds(terminator, wg, conf)
 
 	<-interrupt
 	//trace.Stop()
