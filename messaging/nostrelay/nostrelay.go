@@ -124,7 +124,9 @@ var startedRelays = false
 var publishQueue = make(chan nostr.Event)
 
 func startRelaysForPublishing() {
-	pool := initRelays(mindmachine.MakeOrGetConfig().GetStringSlice("relays"))
+	relays := mindmachine.MakeOrGetConfig().GetStringSlice("relays")
+	relays = append(relays, mindmachine.MakeOrGetConfig().GetStringSlice("optionalrelays")...)
+	pool := initRelays(relays)
 	for {
 		select {
 		case event := <-publishQueue:
