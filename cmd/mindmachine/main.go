@@ -48,6 +48,7 @@ func main() {
 	conf := viper.New()
 
 	// Now we initialise this configuration with basic settings that are required on startup.
+	// This function write default config to config.yaml
 	initConfig(conf)
 
 	// make the config accessible globally
@@ -92,7 +93,7 @@ func main() {
 	if !delve {
 		go cliListener(interrupt)
 	}
-
+	//mindmachine.currentstate.shutdown to get interrupt
 	mindmachine.RegisterShutdownChan(interrupt)
 
 	// Wait on the terminator channel. This blocks until the channel is closed by sending a shutdown signal.
@@ -108,6 +109,7 @@ func main() {
 	<-interrupt
 	//trace.Stop()
 	mindmachine.MakeOrGetConfig().Set("firstRun", false)
+	//Write current config to config.yaml
 	err := mindmachine.MakeOrGetConfig().WriteConfig()
 	if err != nil {
 		mindmachine.LogCLI(err.Error(), 3)

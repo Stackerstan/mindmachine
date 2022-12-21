@@ -3,8 +3,9 @@ package main
 import (
 	"os"
 
-	"github.com/spf13/viper"
 	"mindmachine/mindmachine"
+
+	"github.com/spf13/viper"
 )
 
 // initConfig sets up our Viper config object
@@ -16,6 +17,7 @@ func initConfig(config *viper.Viper) {
 	config.SetDefault("rootDir", homeDir+"/mindmachine/")
 	config.SetConfigType("yaml")
 	config.SetConfigFile(config.GetString("rootDir") + "config.yaml")
+	//try to read config file from default path
 	err = config.ReadInConfig()
 	if err != nil {
 		mindmachine.LogCLI(err.Error(), 4)
@@ -32,14 +34,14 @@ func initConfig(config *viper.Viper) {
 	if !config.GetBool("devMode") {
 		config.SetDefault("ignitionHeight", int64(761151))
 	}
-	config.SetDefault("websocketAddr", "127.0.0.1:1031")
+	config.SetDefault("websocketAddr", "0.0.0.0:1031")
 	config.SetDefault("fastSync", true)
 
 	//we usually lean towards errors being fatal to cause less damage to state. If this is set to true, we lean towards staying alive instead.
 	config.SetDefault("highly_reliable", false)
 	config.SetDefault("forceBlocks", false)
 	config.SetDefault("relays", []string{"wss://nostr.688.org"})
-	config.SetDefault("optionalRelays", []string{"ws://127.0.0.1:8100"})
+	config.SetDefault("optionalRelays", []string{"ws://0.0.0.0:8100"})
 	// Create our working directory and config file if not exist
 	initRootDir(config)
 	mindmachine.Touch(config.GetString("rootDir") + "config.yaml")
