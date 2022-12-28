@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/fiatjaf/go-nostr"
 	"github.com/sasha-s/go-deadlock"
+	"github.com/stackerstan/go-nostr"
 	"mindmachine/database"
 	"mindmachine/mindmachine"
 )

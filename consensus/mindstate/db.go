@@ -5,8 +5,8 @@ import (
 	"os"
 	"sync"
 
-	"github.com/fiatjaf/go-nostr"
 	jsoniter "github.com/json-iterator/go"
+	"github.com/stackerstan/go-nostr"
 	"mindmachine/consensus/shares"
 
 	"github.com/sasha-s/go-deadlock"

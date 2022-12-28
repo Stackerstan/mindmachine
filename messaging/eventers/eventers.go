@@ -10,7 +10,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/fiatjaf/go-nostr"
+	"github.com/stackerstan/go-nostr"
 	"mindmachine/auxiliarium/doki"
 	"mindmachine/auxiliarium/patches"
 	"mindmachine/auxiliarium/problems"
@@ -410,21 +410,21 @@ func fullProtocol() (e []nostr.Event) {
 
 func makeProblemTags(item problems.Problem, title string) (t nostr.Tags) {
 	if len(item.Children) > 0 {
-		var children = nostr.StringList{"children"}
+		var children = []string{"children"}
 		for _, child := range item.Children {
 			children = append(children, child)
 		}
 	}
 	if len(item.Parent) > 0 {
-		t = append(t, nostr.StringList{"parent", item.Parent})
+		t = append(t, []string{"parent", item.Parent})
 	}
-	t = append(t, nostr.StringList{"height", fmt.Sprintf("%d", item.WitnessedAt)})
-	t = append(t, nostr.StringList{"mindmachineUID", item.UID})
-	t = append(t, nostr.StringList{"mind", "problems"})
-	t = append(t, nostr.StringList{"sequence", fmt.Sprintf("%d", item.Sequence)})
-	t = append(t, nostr.StringList{"repo", ""})
-	t = append(t, nostr.StringList{"title", title})
-	t = append(t, nostr.StringList{"claimed_by", item.ClaimedBy})
+	t = append(t, []string{"height", fmt.Sprintf("%d", item.WitnessedAt)})
+	t = append(t, []string{"mindmachineUID", item.UID})
+	t = append(t, []string{"mind", "problems"})
+	t = append(t, []string{"sequence", fmt.Sprintf("%d", item.Sequence)})
+	t = append(t, []string{"repo", ""})
+	t = append(t, []string{"title", title})
+	t = append(t, []string{"claimed_by", item.ClaimedBy})
 
 	return
 }
@@ -432,24 +432,24 @@ func makeProblemTags(item problems.Problem, title string) (t nostr.Tags) {
 func makeProtocolTags(item protocol.Item) (t nostr.Tags) {
 	switch item.Kind {
 	case protocol.Definition:
-		t = append(t, nostr.StringList{"kind", "Definition"})
+		t = append(t, []string{"kind", "Definition"})
 	case protocol.Goal:
-		t = append(t, nostr.StringList{"kind", "Goal"})
+		t = append(t, []string{"kind", "Goal"})
 	case protocol.Rule:
-		t = append(t, nostr.StringList{"kind", "Rule"})
+		t = append(t, []string{"kind", "Rule"})
 	case protocol.Invariant:
-		t = append(t, nostr.StringList{"kind", "Invariant"})
+		t = append(t, []string{"kind", "Invariant"})
 	case protocol.Protocol:
-		t = append(t, nostr.StringList{"kind", "Protocol"})
+		t = append(t, []string{"kind", "Protocol"})
 	}
-	var nests = nostr.StringList{"nests"}
+	var nests = []string{"nests"}
 	for _, nest := range item.Nests {
 		nests = append(nests, nest)
 	}
 	if len(nests) > 1 {
 		t = append(t, nests)
 	}
-	t = append(t, nostr.StringList{"mindmachineUID", item.UID})
-	t = append(t, nostr.StringList{"mind", "protocol"})
+	t = append(t, []string{"mindmachineUID", item.UID})
+	t = append(t, []string{"mind", "protocol"})
 	return
 }

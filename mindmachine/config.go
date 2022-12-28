@@ -31,7 +31,12 @@ var currentState = State{}
 var stateMutex = &deadlock.Mutex{}
 
 func Shutdown() {
-	close(currentState.Shutdown)
+	LogCLI("Calling Shutdown", 2)
+	select {
+	case <-currentState.Shutdown:
+	default:
+		close(currentState.Shutdown)
+	}
 }
 
 func RegisterShutdownChan(shutdown chan struct{}) {

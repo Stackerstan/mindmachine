@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fiatjaf/go-nostr"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/rs/cors"
+	"github.com/stackerstan/go-nostr"
 	"mindmachine/mindmachine"
 )
 
@@ -66,45 +66,44 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-func initRelays(r []string) nostr.RelayPool {
-	relayPool = nostr.NewRelayPool()
+func initRelays(r []string) *nostr.RelayPool {
+	fmt.Println(70)
+	p := nostr.NewRelayPool()
 	mindmachine.LogCLI("Connecting to relay pool", 3)
-	//for relay, policy := range config.Relays {
-	//	err := pool.Add(relay, nostr.SimplePolicy{
-	//		Read:  policy.Read,
-	//		Write: policy.Write,
-	//	})
-	//	if err != nil {
-	//		log.Printf("error adding relay '%s': %s", relay, err.Error())
+	_ = p.Add("wss://nostr.688.org/", nostr.SimplePolicy{Read: true, Write: true})
+	//go func() {
+	//	for err := range errchan {
+	//		fmt.Println(err.Error())
 	//	}
+	//}()
+	//for _, s := range r {
+	//	errchan := p.Add(s, nostr.SimplePolicy{Read: true, Write: true})
+	//	go func() {
+	//		for err := range errchan {
+	//			mindmachine.LogCLI(err.Error(), 2)
+	//		}
+	//	}()
 	//}
-	for _, s := range r {
-		if err := relayPool.Add(s, nostr.SimplePolicy{
-			Read:  true,
-			Write: true,
-		}); err != nil {
-			mindmachine.LogCLI(err.Error(), 3)
-		}
-	}
-	//fmt.Printf("%#v", relayPool.Relays)
-	//if len(relayPool) == 0 {
+
+	//fmt.Printf("%#v", p.Relays)
+	//if len(p) == 0 {
 	//	fmt.Printf("\n%#v\n%#v\n", r, *relayPool)
 	//	mindmachine.LogCLI("you don't appear to have any valid relays configured", 0)
 	//}
-	go func() {
-		for notice := range relayPool.Notices {
-			mindmachine.LogCLI(fmt.Sprintf("%s has sent a notice: '%s'\n", notice.Relay, notice.Message), 4)
-		}
-	}()
-	sk = mindmachine.MyWallet().PrivateKey
-	relayPool.SecretKey = &sk
-	return *relayPool
+	//go func() {
+	//	for notice := range p.Notices {
+	//		mindmachine.LogCLI(fmt.Sprintf("%s has sent a notice: '%s'\n", notice.Relay, notice.Message), 4)
+	//	}
+	//}()
+	//sk = mindmachine.MyWallet().PrivateKey
+	//p.SecretKey = &sk
+	return p
 }
 
 func PublishEvent(event nostr.Event) {
 	if _, err := event.CheckSignature(); err == nil {
 		currentState.upsert(event)
-		fmt.Printf("\n107 message size in bytes\n%d\n", len(event.Serialize()))
+		//fmt.Printf("\n107 message size in bytes\n%d\n", len(event.Serialize()))
 		if !startedRelays {
 			go startRelaysForPublishing()
 			startedRelays = true
@@ -117,7 +116,7 @@ func PublishEvent(event nostr.Event) {
 
 func NewRelayPool() nostr.RelayPool {
 	pool := initRelays(mindmachine.MakeOrGetConfig().GetStringSlice("relays"))
-	return pool
+	return *pool
 }
 
 var startedRelays = false
@@ -126,7 +125,22 @@ var publishQueue = make(chan nostr.Event)
 func startRelaysForPublishing() {
 	relays := mindmachine.MakeOrGetConfig().GetStringSlice("relays")
 	relays = append(relays, mindmachine.MakeOrGetConfig().GetStringSlice("optionalrelays")...)
-	pool := initRelays(relays)
+	//pool := initRelays(relays)
+	pool := nostr.NewRelayPool()
+	mindmachine.LogCLI("Connecting to relay pool", 3)
+	for _, s := range relays {
+		errchan := pool.Add(s, nostr.SimplePolicy{Read: true, Write: true})
+		go func() {
+			for err := range errchan {
+				mindmachine.LogCLI(err.Error(), 2)
+			}
+		}()
+	}
+	defer func() {
+		for _, s := range mindmachine.MakeOrGetConfig().GetStringSlice("relays") {
+			pool.Remove(s)
+		}
+	}()
 	for {
 		select {
 		case event := <-publishQueue:

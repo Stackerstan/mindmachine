@@ -6,8 +6,8 @@ import (
 	"os"
 	"sync"
 
-	"github.com/fiatjaf/go-nostr"
 	"github.com/sasha-s/go-deadlock"
+	"github.com/stackerstan/go-nostr"
 	"mindmachine/database"
 	"mindmachine/mindmachine"
 )
@@ -90,6 +90,8 @@ func (s *db) upsert(i nostr.Event) {
 }
 
 func persist() {
+	currentState.mutex.Lock()
+	defer currentState.mutex.Unlock()
 	b, err := json.MarshalIndent(currentState.data, "", " ")
 	if err != nil {
 		mindmachine.LogCLI(err.Error(), 0)

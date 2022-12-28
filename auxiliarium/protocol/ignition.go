@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fiatjaf/go-nostr"
+	"github.com/stackerstan/go-nostr"
 	"mindmachine/mindmachine"
 )
 
@@ -29,7 +29,7 @@ func ignition(generate bool) []nostr.Event {
 		text.ID = text.GetID()
 		text.Sign(mindmachine.MyWallet().PrivateKey)
 	}
-	tags := nostr.Tags{nostr.StringList{"height", fmt.Sprintf("%d", mindmachine.MakeOrGetConfig().GetInt64("ignitionHeight"))}, nostr.StringList{"seq", fmt.Sprintf("%d", 3)}}
+	tags := nostr.Tags{[]string{"height", fmt.Sprintf("%d", mindmachine.MakeOrGetConfig().GetInt64("ignitionHeight"))}, []string{"seq", fmt.Sprintf("%d", 3)}}
 	content := Kind640600{
 		Problem: "76b568caa18211152aba90826ded21e54096cec880a01fc2d9f8e7b344d6cfa6",
 		Text:    "a0284a96c828e10c869b9099cea3fa47de4ba5a22ef482afa00f6127734e9085",
