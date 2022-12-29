@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fiatjaf/go-nostr"
+	"github.com/stackerstan/go-nostr"
 	"mindmachine/mindmachine"
 )
 
@@ -80,7 +80,7 @@ func ignitionVPSS() (e nostr.Event) {
 		PubKey:    mindmachine.IgnitionAccount,
 		CreatedAt: time.Unix(1667239800, 0), //createdat: 1667239800 height: 761151 ts: 1667239492 hash: 0000000000000000000040c44418efd4a6ffb03620266b5d802678031384e514
 		Kind:      640000,
-		Tags:      nostr.Tags{nostr.StringList{"height", "761151"}, nostr.StringList{"sequence", fmt.Sprintf("%d", 1)}},
+		Tags:      nostr.Tags{[]string{"height", "761151"}, []string{"sequence", fmt.Sprintf("%d", 1)}},
 		Content:   fmt.Sprintf("%s", j),
 		Sig:       "213f27d24d073aedf2010f6cfb693aaa746b8234953a297d48293f844e2006897bd7ff958f6d88e543dca99d0e722e2979dc951227e34fb74d40ab7e7bd5b720",
 	}

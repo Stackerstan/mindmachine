@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"github.com/btcsuite/btcd/btcec/v2"
-	"github.com/fiatjaf/go-nostr/nip06"
+	"github.com/nbd-wtf/go-nostr/nip06"
 	"github.com/sasha-s/go-deadlock"
 )
 

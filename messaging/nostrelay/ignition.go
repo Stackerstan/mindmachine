@@ -3,7 +3,7 @@ package nostrelay
 import (
 	"time"
 
-	"github.com/fiatjaf/go-nostr"
+	"github.com/stackerstan/go-nostr"
 	"mindmachine/mindmachine"
 )
 
@@ -14,8 +14,8 @@ func GetIgnitionBlock() mindmachine.Event {
 		CreatedAt: time.Now(),
 		Kind:      125,
 		Tags: nostr.Tags{
-			nostr.StringList{"block", "761151", "0000000000000000000040c44418efd4a6ffb03620266b5d802678031384e514", "1667239492"},
-			nostr.StringList{"mind", "blocks"},
+			[]string{"block", "761151", "0000000000000000000040c44418efd4a6ffb03620266b5d802678031384e514", "1667239492"},
+			[]string{"mind", "blocks"},
 		},
 	}
 	b.Sign(mindmachine.MyWallet().PrivateKey)

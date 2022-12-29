@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/fiatjaf/go-nostr"
+	"github.com/stackerstan/go-nostr"
 	"mindmachine/mindmachine"
 )
 
@@ -40,7 +40,7 @@ func ignition(generate bool) []nostr.Event {
 		description.ID = "b22ddf824cc4fc0824c65393488bd47a3a7ef841ae2f04d91853ee80f08cda66"
 		description.Sig = "9432b62321ed8b9d5138214b94c1f4c6ef9a0321a3a2d22bda518d364cc509a7a78771eea9f507df7af634239e2b0d980b49eb81e80ea9c7c6e3c5e51c536971"
 	}
-	tags := nostr.Tags{nostr.StringList{"height", fmt.Sprintf("%d", mindmachine.MakeOrGetConfig().GetInt64("ignitionHeight"))}, nostr.StringList{"seq", fmt.Sprintf("%d", 2)}}
+	tags := nostr.Tags{[]string{"height", fmt.Sprintf("%d", mindmachine.MakeOrGetConfig().GetInt64("ignitionHeight"))}, []string{"seq", fmt.Sprintf("%d", 2)}}
 	content := Kind640800{
 		Title:       title.ID,
 		Description: description.ID,
