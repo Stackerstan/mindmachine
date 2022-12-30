@@ -328,39 +328,6 @@ func handleWebsocket() func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-//var batchStarted bool
-//var batchChannel = make(chan string, 100)
-//
-//func batchETagProxyRequests(etags []string, reply chan nostr.Event) {
-//	fmt.Printf("\n356\n%#v", etags)
-//	for _, etag := range etags {
-//		batchChannel <- etag
-//	}
-//	if !batchStarted {
-//		batchStarted = true
-//		go func() {
-//			var allETags []string
-//		B:
-//			for {
-//				select {
-//				case tag := <-batchChannel:
-//					allETags = append(allETags, tag)
-//				case <-time.After(time.Second * 2):
-//					break B
-//				}
-//			}
-//			var filters nostr.Filters
-//			if len(allETags) > 0 {
-//				newFilter := nostr.Filter{
-//					IDs: allETags,
-//				}
-//				filters = append(filters, newFilter)
-//			}
-//			proxySubscription(filters, reply)
-//		}()
-//	}
-//}
-
 //InjectEvent takes an event and sends it to the router, injecting it into the stream of events received over websockets
 func InjectEvent(e nostr.Event) {
 	var evt mindmachine.Event
