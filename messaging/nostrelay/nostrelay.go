@@ -66,40 +66,6 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-func initRelays(r []string) *nostr.RelayPool {
-	fmt.Println(70)
-	p := nostr.NewRelayPool()
-	mindmachine.LogCLI("Connecting to relay pool", 3)
-	_ = p.Add("wss://nostr.688.org/", nostr.SimplePolicy{Read: true, Write: true})
-	//go func() {
-	//	for err := range errchan {
-	//		fmt.Println(err.Error())
-	//	}
-	//}()
-	//for _, s := range r {
-	//	errchan := p.Add(s, nostr.SimplePolicy{Read: true, Write: true})
-	//	go func() {
-	//		for err := range errchan {
-	//			mindmachine.LogCLI(err.Error(), 2)
-	//		}
-	//	}()
-	//}
-
-	//fmt.Printf("%#v", p.Relays)
-	//if len(p) == 0 {
-	//	fmt.Printf("\n%#v\n%#v\n", r, *relayPool)
-	//	mindmachine.LogCLI("you don't appear to have any valid relays configured", 0)
-	//}
-	//go func() {
-	//	for notice := range p.Notices {
-	//		mindmachine.LogCLI(fmt.Sprintf("%s has sent a notice: '%s'\n", notice.Relay, notice.Message), 4)
-	//	}
-	//}()
-	//sk = mindmachine.MyWallet().PrivateKey
-	//p.SecretKey = &sk
-	return p
-}
-
 func PublishEvent(event nostr.Event) {
 	if _, err := event.CheckSignature(); err == nil {
 		currentState.upsert(event)
@@ -112,11 +78,6 @@ func PublishEvent(event nostr.Event) {
 	} else {
 		mindmachine.LogCLI("invalid signature on event "+event.ID, 2)
 	}
-}
-
-func NewRelayPool() nostr.RelayPool {
-	pool := initRelays(mindmachine.MakeOrGetConfig().GetStringSlice("relays"))
-	return *pool
 }
 
 var startedRelays = false
