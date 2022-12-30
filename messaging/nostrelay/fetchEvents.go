@@ -20,25 +20,6 @@ func FetchLocalCachedEvent(event string) (nostr.Event, bool) {
 	return nostr.Event{}, false
 }
 
-func poolit(r []string) *nostr.RelayPool {
-	fmt.Println(24)
-	pool := nostr.NewRelayPool()
-	mindmachine.LogCLI("Connecting to relay pool", 3)
-	errchan := pool.Add("wss://nostr.688.org/", nostr.SimplePolicy{Read: true, Write: true})
-	go func() {
-		for err := range errchan {
-			fmt.Println(err.Error())
-		}
-	}()
-	go func() {
-		for notice := range pool.Notices {
-			mindmachine.LogCLI(fmt.Sprintf("%s has sent a notice: '%s'\n", notice.Relay, notice.Message), 4)
-		}
-	}()
-	//fmt.Printf("\n0\n%#v\n", pool)
-	return pool
-}
-
 func unique(all chan nostr.EventMessage) chan nostr.Event {
 	uniqueEvents := make(chan nostr.Event)
 	go func() {
