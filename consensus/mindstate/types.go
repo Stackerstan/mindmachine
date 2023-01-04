@@ -1,8 +1,8 @@
 package mindstate
 
 import (
-	"github.com/fiatjaf/go-nostr"
 	"github.com/sasha-s/go-deadlock"
+	"github.com/stackerstan/go-nostr"
 	"mindmachine/mindmachine"
 )
 

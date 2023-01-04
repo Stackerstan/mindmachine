@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fiatjaf/go-nostr"
 	"github.com/spf13/cast"
+	"github.com/stackerstan/go-nostr"
 	"mindmachine/messaging/blocks"
 	"mindmachine/mindmachine"
 )
@@ -18,6 +18,45 @@ func FetchLocalCachedEvent(event string) (nostr.Event, bool) {
 		return localEvent, true
 	}
 	return nostr.Event{}, false
+}
+
+func poolit(r []string) *nostr.RelayPool {
+	fmt.Println(24)
+	pool := nostr.NewRelayPool()
+	mindmachine.LogCLI("Connecting to relay pool", 3)
+	errchan := pool.Add("wss://nostr.688.org/", nostr.SimplePolicy{Read: true, Write: true})
+	go func() {
+		for err := range errchan {
+			fmt.Println(err.Error())
+		}
+	}()
+	go func() {
+		for notice := range pool.Notices {
+			mindmachine.LogCLI(fmt.Sprintf("%s has sent a notice: '%s'\n", notice.Relay, notice.Message), 4)
+		}
+	}()
+	//fmt.Printf("\n0\n%#v\n", pool)
+	return pool
+}
+
+func unique(all chan nostr.EventMessage) chan nostr.Event {
+	uniqueEvents := make(chan nostr.Event)
+	go func() {
+		for eventMessage := range all {
+			uniqueEvents <- eventMessage.Event
+		}
+	}()
+	//emittedAlready := s.MapOf[string, struct{}]{}
+	//
+	//go func() {
+	//	for eventMessage := range all {
+	//		if _, ok := emittedAlready.LoadOrStore(eventMessage.Event.ID, struct{}{}); !ok {
+	//			uniqueEvents <- eventMessage.Event
+	//		}
+	//	}
+	//}()
+
+	return uniqueEvents
 }
 
 func FetchEventPack(eventPack []string) (events []mindmachine.Event, ok bool) {
@@ -49,27 +88,56 @@ func FetchEventPack(eventPack []string) (events []mindmachine.Event, ok bool) {
 		}
 		filters = append(filters, newFilter)
 	}
+	//fmt.Printf("\n\n%#v\n", filters)
 	if len(filters) > 0 {
-		relays := mindmachine.MakeOrGetConfig().GetStringSlice("relays")
-		pool := initRelays(relays)
+		//pool := poolit([]string{"asf"}) //poolit([]string{"asf"})
+		//fmt.Printf("\n1\n%#v\n", pool)
+		pool := nostr.NewRelayPool()
+		mindmachine.LogCLI("Connecting to relay pool", 3)
+		for _, s := range mindmachine.MakeOrGetConfig().GetStringSlice("relays") {
+			errchan := pool.Add(s, nostr.SimplePolicy{Read: true, Write: true})
+			go func() {
+				for err := range errchan {
+					mindmachine.LogCLI(err.Error(), 2)
+				}
+			}()
+		}
+		defer func() {
+			for _, s := range mindmachine.MakeOrGetConfig().GetStringSlice("relays") {
+				pool.Remove(s)
+			}
+		}()
+		//errchan := pool.Add("wss://nostr.688.org/", nostr.SimplePolicy{Read: true, Write: true})
+		//go func() {
+		//	for err := range errchan {
+		//		fmt.Println(err.Error())
+		//	}
+		//}()
+
+		//relays := mindmachine.MakeOrGetConfig().GetStringSlice("relays")
+		//pool := initRelays(relays)
+		//pool := nostr.NewRelayPool()
+		//
+		//_ = pool.Add("wss://nostr.688.org/", nostr.SimplePolicy{Read: true, Write: true})
 		fmt.Printf("\nFetching Events:\n%#v\n", idsToSubscribe)
-		sub := pool.Sub(filters)
+		_, evts, unsub := pool.Sub(filters)
 		attempts := 0
 		gotResult := false
 		for {
 			select {
-			case event := <-sub.UniqueEvents:
+			case event := <-unique(evts): //nostr.Unique(evts):
 				if mindmachine.Contains(fetch, event.ID) {
 					temp[event.ID] = event
 					currentState.upsert(event)
 					gotResult = true
 				}
 				continue
-			case <-time.After(1 * time.Second):
+			case <-time.After(3 * time.Second):
 				if gotResult {
+					fmt.Println(116)
 					break
 				}
-				fmt.Println(54)
+				fmt.Println(118)
 				attempts++
 				if attempts > len(idsToSubscribe) {
 					break
@@ -79,7 +147,7 @@ func FetchEventPack(eventPack []string) (events []mindmachine.Event, ok bool) {
 			}
 			break
 		}
-		sub.Unsub()
+		unsub()
 	}
 	for _, s := range fetch {
 		if _, ok := temp[s]; !ok {
@@ -110,7 +178,9 @@ func FetchEventPack(eventPack []string) (events []mindmachine.Event, ok bool) {
 
 				} else {
 					//cool story
-					mindmachine.LogCLI(fmt.Sprintf("invalid block in eventpack %d", height), 1)
+					if height != 761151 {
+						mindmachine.LogCLI(fmt.Sprintf("invalid block in eventpack %d", height), 1)
+					}
 				}
 			}
 
@@ -168,8 +238,8 @@ func makeBlock(h int64) nostr.Event {
 		CreatedAt: time.Now(),
 		Kind:      125,
 		Tags: nostr.Tags{
-			nostr.StringList{"block", fmt.Sprintf("%d", block.Height), block.Hash, fmt.Sprintf("%d", block.Time)},
-			nostr.StringList{"mind", "blocks"}},
+			[]string{"block", fmt.Sprintf("%d", block.Height), block.Hash, fmt.Sprintf("%d", block.Time)},
+			[]string{"mind", "blocks"}},
 	}
 	err = b.Sign(mindmachine.MyWallet().PrivateKey)
 	if err != nil {

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fiatjaf/go-nostr"
+	"github.com/stackerstan/go-nostr"
 	"mindmachine/mindmachine"
 )
 

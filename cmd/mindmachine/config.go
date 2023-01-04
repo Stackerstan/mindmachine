@@ -40,8 +40,8 @@ func initConfig(config *viper.Viper) {
 	//we usually lean towards errors being fatal to cause less damage to state. If this is set to true, we lean towards staying alive instead.
 	config.SetDefault("highly_reliable", false)
 	config.SetDefault("forceBlocks", false)
-	config.SetDefault("relays", []string{"wss://nostr.688.org"})
-	config.SetDefault("optionalRelays", []string{"ws://0.0.0.0:8100"})
+	config.SetDefault("relays", []string{"wss://nostr.688.org", "wss://nostr-pub.wellorder.net", "wss://nostr.walletofsatoshi.com", "wss://nostr.bongbong.com"})
+	config.SetDefault("optionalRelays", []string{"ws://127.0.0.1:8100"})
 	// Create our working directory and config file if not exist
 	initRootDir(config)
 	mindmachine.Touch(config.GetString("rootDir") + "config.yaml")

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/eiannone/keyboard"
-	"github.com/fiatjaf/go-nostr"
+	"github.com/stackerstan/go-nostr"
 	"mindmachine/auxiliarium/patches"
 	"mindmachine/auxiliarium/problems"
 	"mindmachine/auxiliarium/protocol"
@@ -124,8 +124,8 @@ func cliListener(interrupt chan struct{}) {
 			}
 			for _, event := range e {
 				if event.Kind == 641002 {
-					event.Tags = nostr.Tags{nostr.StringList{"sequence", fmt.Sprintf("%d", sequence.GetSequence(mindmachine.MyWallet().Account)+1)}}
-					event.Tags = append(event.Tags, nostr.StringList{"height", fmt.Sprintf("%d", mindmachine.CurrentState().Processing.Height)})
+					event.Tags = nostr.Tags{[]string{"sequence", fmt.Sprintf("%d", sequence.GetSequence(mindmachine.MyWallet().Account)+1)}}
+					event.Tags = append(event.Tags, []string{"height", fmt.Sprintf("%d", mindmachine.CurrentState().Processing.Height)})
 				}
 				event.Sign(mindmachine.MyWallet().PrivateKey)
 				nostrelay.PublishEvent(event)
@@ -145,8 +145,8 @@ func cliListener(interrupt chan struct{}) {
 			if merge, err := repo.UnsignedMergePatchOffer("834d8b4ad8919869007cd77b5079cf25aaaf4f5fd64eeeddf2fc11b235bdefd2"); err == nil {
 				merge.PubKey = mindmachine.IgnitionAccount
 				if merge.Kind == 641004 {
-					merge.Tags = nostr.Tags{nostr.StringList{"sequence", fmt.Sprintf("%d", sequence.GetSequence(mindmachine.MyWallet().Account)+1)}}
-					merge.Tags = append(merge.Tags, nostr.StringList{"height", fmt.Sprintf("%d", mindmachine.CurrentState().Processing.Height)})
+					merge.Tags = nostr.Tags{[]string{"sequence", fmt.Sprintf("%d", sequence.GetSequence(mindmachine.MyWallet().Account)+1)}}
+					merge.Tags = append(merge.Tags, []string{"height", fmt.Sprintf("%d", mindmachine.CurrentState().Processing.Height)})
 				}
 				merge.Sign("d836119ecf4700711e44acfd4f7878e1b40fa5c8a5df593dc043564ca710e35f")
 				fmt.Printf("%#v", merge)
@@ -250,47 +250,47 @@ func cliListener(interrupt chan struct{}) {
 		case "S":
 			eventcatcher.Replay()
 		case "d":
-
-			go func() {
-				var eventIDToSave string = ""
-				pool := nostrelay.NewRelayPool()
-				sub := pool.Sub(nostr.Filters{nostr.Filter{
-					Kinds:   nostr.IntList{640001},
-					Authors: []string{mindmachine.MyWallet().Account},
-				}})
-				var events []nostr.Event
-			L:
-				for {
-					select {
-					case e := <-sub.UniqueEvents:
-						events = append(events, e)
-					case <-time.After(time.Second * 5):
-						break L
-					}
-				}
-				n := nostr.Event{
-					PubKey:    mindmachine.MyWallet().Account,
-					CreatedAt: time.Now(),
-					Kind:      5,
-					Content:   "Rollback required to address bug",
-				}
-				tags := nostr.Tags{}
-				for _, event := range events {
-					if event.ID != eventIDToSave {
-						tags = append(tags, nostr.StringList{"e", event.ID})
-					}
-				}
-				n.Tags = tags
-				n.ID = n.GetID()
-				n.Sign(mindmachine.MyWallet().PrivateKey)
-				_, c, err := pool.PublishEvent(&n)
-				if err != nil {
-					mindmachine.LogCLI(err.Error(), 2)
-				}
-				for status := range c {
-					fmt.Println(status)
-				}
-			}()
+			//
+			//go func() {
+			//	var eventIDToSave string = ""
+			//	pool := nostrelay.NewRelayPool()
+			//	sub := pool.Sub(nostr.Filters{nostr.Filter{
+			//		Kinds:   []int{640001},
+			//		Authors: []string{mindmachine.MyWallet().Account},
+			//	}})
+			//	var events []nostr.Event
+			//L:
+			//	for {
+			//		select {
+			//		case e := <-sub.UniqueEvents:
+			//			events = append(events, e)
+			//		case <-time.After(time.Second * 5):
+			//			break L
+			//		}
+			//	}
+			//	n := nostr.Event{
+			//		PubKey:    mindmachine.MyWallet().Account,
+			//		CreatedAt: time.Now(),
+			//		Kind:      5,
+			//		Content:   "Rollback required to address bug",
+			//	}
+			//	tags := nostr.Tags{}
+			//	for _, event := range events {
+			//		if event.ID != eventIDToSave {
+			//			tags = append(tags, []string{"e", event.ID})
+			//		}
+			//	}
+			//	n.Tags = tags
+			//	n.ID = n.GetID()
+			//	n.Sign(mindmachine.MyWallet().PrivateKey)
+			//	_, c, err := pool.PublishEvent(&n)
+			//	if err != nil {
+			//		mindmachine.LogCLI(err.Error(), 2)
+			//	}
+			//	for status := range c {
+			//		fmt.Println(status)
+			//	}
+			//}()
 		case "R":
 			go func() { nostrelay.RepublishEverything() }()
 

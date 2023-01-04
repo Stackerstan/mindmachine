@@ -8,9 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fiatjaf/go-nostr"
 	dircopy "github.com/otiai10/copy"
-
+	"github.com/stackerstan/go-nostr"
 	"mindmachine/mindmachine"
 )
 

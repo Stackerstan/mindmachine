@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fiatjaf/go-nostr"
 	"github.com/sasha-s/go-deadlock"
 	"github.com/spf13/cast"
+	"github.com/stackerstan/go-nostr"
 	"mindmachine/auxiliarium/patches"
 	"mindmachine/auxiliarium/samizdat"
 	"mindmachine/consensus/conductor"
@@ -88,7 +88,7 @@ func catchUpOnBlocks() bool {
 				PubKey:    mindmachine.MyWallet().Account,
 				CreatedAt: time.Now(),
 				Kind:      125,
-				Tags:      nostr.Tags{nostr.StringList{"block", fmt.Sprintf("%d", next.Height), next.Hash, fmt.Sprintf("%d", next.Time)}},
+				Tags:      nostr.Tags{[]string{"block", fmt.Sprintf("%d", next.Height), next.Hash, fmt.Sprintf("%d", next.Time)}},
 			}
 			err = tempBlock.Sign(mindmachine.MyWallet().PrivateKey)
 			if err != nil {
@@ -108,10 +108,10 @@ var attempts = 0
 
 func fetchEventPackLooper() {
 	startHeight := mindmachine.CurrentState().Processing.Height
-	fetchEventPack()
+	fetchLatest640001()
 	if startHeight == mindmachine.CurrentState().Processing.Height {
 		if mindmachine.CurrentState().Processing.Height == 761151 {
-			fetchEventPack()
+			fetchLatest640001()
 		}
 		if blocksBehind() > 1 && attempts < 4 {
 			time.Sleep(time.Second * 2)
@@ -128,7 +128,7 @@ func fetchEventPackLooper() {
 
 //todo return the height of the resulting state, and if it isn't the current bitcoin tip try again. If we have votepower and we can't get any higher, start populating blocks.
 //whenever we fall behind the current tip, try to fetch event pack again
-func fetchEventPack() {
+func fetchLatest640001() {
 	//return
 	mindmachine.LogCLI("Looking for a kind 640001 Event to catch up to our peers", 4)
 	if !fetching {
@@ -137,34 +137,51 @@ func fetchEventPack() {
 		defer func() { fetching = false }()
 		liveEventsMutex.Lock()
 		defer liveEventsMutex.Unlock()
-		pool := nostrelay.NewRelayPool()
+		//pool := nostrelay.NewRelayPool()
+		pool := nostr.NewRelayPool()
+		mindmachine.LogCLI("Connecting to relay pool", 3)
+		for _, s := range mindmachine.MakeOrGetConfig().GetStringSlice("relays") {
+			errchan := pool.Add(s, nostr.SimplePolicy{Read: true, Write: true})
+			go func() {
+				for err := range errchan {
+					mindmachine.LogCLI(err.Error(), 2)
+				}
+			}()
+		}
+		defer func() {
+			for _, s := range mindmachine.MakeOrGetConfig().GetStringSlice("relays") {
+				pool.Remove(s)
+			}
+		}()
+
 		accounts := shares.AccountsWithVotepower()
 		var accs []mindmachine.Account
 		for account, _ := range accounts {
 			accs = append(accs, account)
 		}
 		t := time.Now()
-		t = t.Add(-1 * time.Hour)
+		t = t.Add(-4 * time.Hour)
 		if shares.VotePowerForAccount(mindmachine.MyWallet().Account) > 0 {
 			//t = t.Add(-168 * time.Hour)
 		}
-		sub := pool.Sub(nostr.Filters{nostr.Filter{
-			Kinds:   nostr.IntList{640001},
+		_, evnts, unsub := pool.Sub(nostr.Filters{nostr.Filter{
+			Kinds:   []int{640001},
 			Authors: accs,
 			Since:   &t,
 		}})
 		var tries int64 = 0
-		behind := blocksBehind()
+		//behind := blocksBehind()
 		gotResult := false
-		var events []nostr.Event
+		var events = make(map[string]nostr.Event)
 		//for s, _ := range pool.Relays {
 		//	mindmachine.LogCLI(fmt.Sprintf("Connected to %s", s), 4)
 		//} fiatjaf broke userspace! First he gives us branle, and now this?
 	L:
-		for tries < (behind / 10) {
+		for tries < 10 {
 			select {
-			case e := <-sub.UniqueEvents:
-				events = append(events, e)
+			case e := <-nostr.Unique(evnts):
+				//fmt.Println(e)
+				events[e.ID] = e
 				gotResult = true
 			case <-time.After(time.Second * 2):
 				if gotResult {
@@ -173,6 +190,7 @@ func fetchEventPack() {
 				tries++
 			}
 		}
+		unsub()
 		// sub.Unsub() this makes us crash:
 		//github.com/fiatjaf/go-nostr.Subscription.startHandlingUnique({{0xc000916430, 0xe}, 0xc000926690, {0xc0002740e0, 0x1, 0x1}, 0xc000322ae0, 0x0, 0xc000322b40, 0x0})
 		//	/Users/x/go/pkg/mod/github.com/fiatjaf/go-nostr@v0.7.4/subscription.go:66 +0x198
@@ -297,22 +315,41 @@ func subscribeToSamizdat() {
 			return
 		}
 		samizdat.HandleEvent(s[0])
-		pool := nostrelay.NewRelayPool()
+		//pool := nostrelay.NewRelayPool()
+		pool := nostr.NewRelayPool()
+		mindmachine.LogCLI("Connecting to relay pool", 3)
+		for _, s := range mindmachine.MakeOrGetConfig().GetStringSlice("relays") {
+			errchan := pool.Add(s, nostr.SimplePolicy{Read: true, Write: true})
+			go func() {
+				for err := range errchan {
+					mindmachine.LogCLI(err.Error(), 2)
+				}
+			}()
+		}
+		defer func() {
+			for _, s := range mindmachine.MakeOrGetConfig().GetStringSlice("relays") {
+				pool.Remove(s)
+			}
+		}()
+
 		filters := nostr.Filters{}
-		tags := make(map[string]nostr.StringList)
-		tags["e"] = nostr.StringList{"9e333343184fe3e98b028782f7098cf596f1f46adf546541e7317d9a5f1d5d57"}
+		tags := make(map[string][]string)
+		tags["e"] = []string{"9e333343184fe3e98b028782f7098cf596f1f46adf546541e7317d9a5f1d5d57"}
 		filters = append(filters, nostr.Filter{
-			Kinds: nostr.IntList{1},
+			Kinds: []int{1},
 			Tags:  tags,
 		})
-		sub := pool.Sub(filters)
+		_, evnts, unsub := pool.Sub(filters)
 		go func() {
 			for {
 				select {
-				case e := <-sub.UniqueEvents:
+				case e := <-nostr.Unique(evnts):
 					if ok, _ := e.CheckSignature(); ok {
 						samizdat.HandleEvent(mindmachine.ConvertToInternalEvent(&e))
 					}
+				case <-time.After(time.Second * 5):
+					unsub()
+					break
 				}
 			}
 		}()
@@ -322,7 +359,23 @@ func subscribeToSamizdat() {
 func startEventSubscription() {
 	if !started {
 		started = true
-		pool := nostrelay.NewRelayPool()
+		//pool := nostrelay.NewRelayPool()
+		pool := nostr.NewRelayPool()
+		mindmachine.LogCLI("Connecting to relay pool", 3)
+		for _, s := range mindmachine.MakeOrGetConfig().GetStringSlice("relays") {
+			errchan := pool.Add(s, nostr.SimplePolicy{Read: true, Write: true})
+			go func() {
+				for err := range errchan {
+					mindmachine.LogCLI(err.Error(), 2)
+				}
+			}()
+		}
+		defer func() {
+			for _, s := range mindmachine.MakeOrGetConfig().GetStringSlice("relays") {
+				pool.Remove(s)
+			}
+		}()
+
 		latest := mindstate.GetLatestStates()
 		block, err := blocks.FetchBlock(latest["shares"].Height)
 		if err != nil {
@@ -331,7 +384,7 @@ func startEventSubscription() {
 		//we want all events produced after the latest >500 permille block height,
 		//but block timestamps can be up to 2 hours off
 		t := time.Unix(block.Time-7200, 0)
-		kinds := nostr.IntList{}
+		kinds := []int{}
 		for i, _ := range mindmachine.GetAllKinds() {
 			if i >= 640000 && i <= 649999 {
 				kinds = append(kinds, int(i))
@@ -342,12 +395,13 @@ func startEventSubscription() {
 			Kinds: kinds,
 			Since: &t,
 		})
-		sub := pool.Sub(filters)
+		_, evts, unsub := pool.Sub(filters)
+		defer unsub()
 		eventQueue := make(chan nostr.Event)
 		go func() {
 			for {
 				select {
-				case e := <-sub.UniqueEvents:
+				case e := <-nostr.Unique(evts):
 					//fmt.Printf("\n138\n%#v\n", e)
 					go func() {
 						eventQueue <- e
@@ -413,7 +467,7 @@ func startEventSubscription() {
 					PubKey:    mindmachine.MyWallet().Account,
 					CreatedAt: time.Now(),
 					Kind:      125,
-					Tags:      nostr.Tags{nostr.StringList{"block", fmt.Sprintf("%d", bh.Height), bh.Hash, fmt.Sprintf("%d", bh.Time)}},
+					Tags:      nostr.Tags{[]string{"block", fmt.Sprintf("%d", bh.Height), bh.Hash, fmt.Sprintf("%d", bh.Time)}},
 				}
 				err := tempBlock.Sign(mindmachine.MyWallet().PrivateKey)
 				if err != nil {
@@ -428,7 +482,7 @@ func startEventSubscription() {
 					//}
 				} else {
 					if height > mindmachine.CurrentState().Processing.Height+1 {
-						go fetchEventPack()
+						go fetchLatest640001()
 					}
 				}
 				liveEventsMutex.Unlock()
@@ -664,7 +718,8 @@ func handleEventPack(events []mindmachine.Event) (states []mindmachine.HashSeq) 
 					}
 				} else {
 					fmt.Printf("\n%#v\n", event)
-					mindmachine.LogCLI("event in messagepack failed", 3)
+					mindmachine.LogCLI("event in messagepack failed, keep running \"make reset\" until it works (buggy)", 2)
+					mindmachine.Shutdown()
 				}
 			}
 		}
@@ -713,7 +768,7 @@ func hashSeqToSignedVPSS(hs mindmachine.HashSeq, sequence int64) (n nostr.Event,
 		n.CreatedAt = time.Now()
 		n.Kind = 640000
 		n.PubKey = mindmachine.MyWallet().Account
-		n.Tags = nostr.Tags{nostr.StringList{"height", fmt.Sprintf("%d", mindmachine.CurrentState().Processing.Height)}, nostr.StringList{"sequence", fmt.Sprintf("%d", sequence)}}
+		n.Tags = nostr.Tags{[]string{"height", fmt.Sprintf("%d", mindmachine.CurrentState().Processing.Height)}, []string{"sequence", fmt.Sprintf("%d", sequence)}}
 		n.Content = fmt.Sprintf("%s", j)
 		n.ID = n.GetID()
 		err = n.Sign(mindmachine.MyWallet().PrivateKey)

@@ -62,9 +62,7 @@ func listenForNewBlocksFromPublicAPI(listener chan mindmachine.BlockHeader) {
 					//	mindmachine.LogCLI(err.Error(), 0)
 					//	return
 					//}
-					fmt.Println(64)
 					listener <- bitcoinTip
-					fmt.Println(66)
 				}
 				//if bitcoinTip.Height > nextBlockHeight {
 				//	h, err := FetchBlock(nextBlockHeight)

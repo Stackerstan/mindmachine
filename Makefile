@@ -28,3 +28,7 @@ reset:
 	rm -rf ~/mindmachine/nostrelay
 	go mod tidy
 	go run cmd/mindmachine/*.go
+
+clearconfig:
+	cp ~/mindmachine/config.yaml ~/mindmachine/config.yaml.old
+	rm ~/mindmachine/config.yaml
