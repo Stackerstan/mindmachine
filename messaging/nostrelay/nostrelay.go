@@ -66,40 +66,6 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-func initRelays(r []string) *nostr.RelayPool {
-	fmt.Println(70)
-	p := nostr.NewRelayPool()
-	mindmachine.LogCLI("Connecting to relay pool", 3)
-	_ = p.Add("wss://nostr.688.org/", nostr.SimplePolicy{Read: true, Write: true})
-	//go func() {
-	//	for err := range errchan {
-	//		fmt.Println(err.Error())
-	//	}
-	//}()
-	//for _, s := range r {
-	//	errchan := p.Add(s, nostr.SimplePolicy{Read: true, Write: true})
-	//	go func() {
-	//		for err := range errchan {
-	//			mindmachine.LogCLI(err.Error(), 2)
-	//		}
-	//	}()
-	//}
-
-	//fmt.Printf("%#v", p.Relays)
-	//if len(p) == 0 {
-	//	fmt.Printf("\n%#v\n%#v\n", r, *relayPool)
-	//	mindmachine.LogCLI("you don't appear to have any valid relays configured", 0)
-	//}
-	//go func() {
-	//	for notice := range p.Notices {
-	//		mindmachine.LogCLI(fmt.Sprintf("%s has sent a notice: '%s'\n", notice.Relay, notice.Message), 4)
-	//	}
-	//}()
-	//sk = mindmachine.MyWallet().PrivateKey
-	//p.SecretKey = &sk
-	return p
-}
-
 func PublishEvent(event nostr.Event) {
 	if _, err := event.CheckSignature(); err == nil {
 		currentState.upsert(event)
@@ -112,11 +78,6 @@ func PublishEvent(event nostr.Event) {
 	} else {
 		mindmachine.LogCLI("invalid signature on event "+event.ID, 2)
 	}
-}
-
-func NewRelayPool() nostr.RelayPool {
-	pool := initRelays(mindmachine.MakeOrGetConfig().GetStringSlice("relays"))
-	return *pool
 }
 
 var startedRelays = false
@@ -366,39 +327,6 @@ func handleWebsocket() func(http.ResponseWriter, *http.Request) {
 		}()
 	}
 }
-
-//var batchStarted bool
-//var batchChannel = make(chan string, 100)
-//
-//func batchETagProxyRequests(etags []string, reply chan nostr.Event) {
-//	fmt.Printf("\n356\n%#v", etags)
-//	for _, etag := range etags {
-//		batchChannel <- etag
-//	}
-//	if !batchStarted {
-//		batchStarted = true
-//		go func() {
-//			var allETags []string
-//		B:
-//			for {
-//				select {
-//				case tag := <-batchChannel:
-//					allETags = append(allETags, tag)
-//				case <-time.After(time.Second * 2):
-//					break B
-//				}
-//			}
-//			var filters nostr.Filters
-//			if len(allETags) > 0 {
-//				newFilter := nostr.Filter{
-//					IDs: allETags,
-//				}
-//				filters = append(filters, newFilter)
-//			}
-//			proxySubscription(filters, reply)
-//		}()
-//	}
-//}
 
 //InjectEvent takes an event and sends it to the router, injecting it into the stream of events received over websockets
 func InjectEvent(e nostr.Event) {

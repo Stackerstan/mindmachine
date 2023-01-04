@@ -10,53 +10,11 @@ import (
 	"mindmachine/mindmachine"
 )
 
-var relayPool *nostr.RelayPool
-var sk string
-
 func FetchLocalCachedEvent(event string) (nostr.Event, bool) {
 	if localEvent, ok := currentState.data[event]; ok {
 		return localEvent, true
 	}
 	return nostr.Event{}, false
-}
-
-func poolit(r []string) *nostr.RelayPool {
-	fmt.Println(24)
-	pool := nostr.NewRelayPool()
-	mindmachine.LogCLI("Connecting to relay pool", 3)
-	errchan := pool.Add("wss://nostr.688.org/", nostr.SimplePolicy{Read: true, Write: true})
-	go func() {
-		for err := range errchan {
-			fmt.Println(err.Error())
-		}
-	}()
-	go func() {
-		for notice := range pool.Notices {
-			mindmachine.LogCLI(fmt.Sprintf("%s has sent a notice: '%s'\n", notice.Relay, notice.Message), 4)
-		}
-	}()
-	//fmt.Printf("\n0\n%#v\n", pool)
-	return pool
-}
-
-func unique(all chan nostr.EventMessage) chan nostr.Event {
-	uniqueEvents := make(chan nostr.Event)
-	go func() {
-		for eventMessage := range all {
-			uniqueEvents <- eventMessage.Event
-		}
-	}()
-	//emittedAlready := s.MapOf[string, struct{}]{}
-	//
-	//go func() {
-	//	for eventMessage := range all {
-	//		if _, ok := emittedAlready.LoadOrStore(eventMessage.Event.ID, struct{}{}); !ok {
-	//			uniqueEvents <- eventMessage.Event
-	//		}
-	//	}
-	//}()
-
-	return uniqueEvents
 }
 
 func FetchEventPack(eventPack []string) (events []mindmachine.Event, ok bool) {
@@ -90,8 +48,6 @@ func FetchEventPack(eventPack []string) (events []mindmachine.Event, ok bool) {
 	}
 	//fmt.Printf("\n\n%#v\n", filters)
 	if len(filters) > 0 {
-		//pool := poolit([]string{"asf"}) //poolit([]string{"asf"})
-		//fmt.Printf("\n1\n%#v\n", pool)
 		pool := nostr.NewRelayPool()
 		mindmachine.LogCLI("Connecting to relay pool", 3)
 		for _, s := range mindmachine.MakeOrGetConfig().GetStringSlice("relays") {
@@ -125,7 +81,7 @@ func FetchEventPack(eventPack []string) (events []mindmachine.Event, ok bool) {
 		gotResult := false
 		for {
 			select {
-			case event := <-unique(evts): //nostr.Unique(evts):
+			case event := <-nostr.Unique(evts):
 				if mindmachine.Contains(fetch, event.ID) {
 					temp[event.ID] = event
 					currentState.upsert(event)
@@ -198,28 +154,6 @@ func FetchEventPack(eventPack []string) (events []mindmachine.Event, ok bool) {
 	}
 	return events, true
 }
-
-//func proxySubscription(filter nostr.Filters, response chan nostr.Event) {
-//	defer persist()
-//	relays := mindmachine.MakeOrGetConfig().GetStringSlice("relays")
-//	pool := initRelays(relays)
-//	sub := pool.Sub(filter)
-//	fmt.Printf("\n136\n%#v\n", filter)
-//	for {
-//		select {
-//		case event := <-sub.UniqueEvents:
-//			go func() {
-//				response <- event
-//			}()
-//			currentState.upsert(event)
-//			continue
-//		case <-time.After(5 * time.Second):
-//			break
-//		}
-//		break
-//	}
-//	sub.Unsub()
-//}
 
 func makeBlock(h int64) nostr.Event {
 	err := fmt.Errorf("")
