@@ -84,7 +84,7 @@ make reset
 >solution: short description of how you solved the problem.' //Now you can close the ''.    
 @: git push //this will send your changes to _your_ fork on Github
 ```    
-8. Go to your fork on Github and select the branch you just worked on. Click "pull request" to send a pull request back to the mindmachine repository.
+8. 去到您正在工作的github分支. 點擊"pull request"來發起一個回到原本分支的和並請求.
 9. 發起一個合并請求, 記得提及你的UID以及Github issue ID 并且在開始用#號標記
 10. 回到問題然後評論:
   ```
