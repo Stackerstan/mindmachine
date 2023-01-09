@@ -1,4 +1,6 @@
 # Mindmachine
+[English](README.md) | [繁體中文](README-CN.md)
+
 An open, persistent, and replicated _state machine_ built on Nostr and Bitcoin. The _ignition state_ was instantiated at Block 761511, which marks the beginning of the experiment, and it's now chugging along happily validating states against the [Stackerstan Superprotocolo](https://stackerstan.org/index.html#protocol)
 
 ### Build and run
