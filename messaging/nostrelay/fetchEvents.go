@@ -4,20 +4,253 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/sasha-s/go-deadlock"
 	"github.com/spf13/cast"
 	"github.com/stackerstan/go-nostr"
+	"mindmachine/consensus/messagepack"
 	"mindmachine/messaging/blocks"
 	"mindmachine/mindmachine"
 )
 
 func FetchLocalCachedEvent(event string) (nostr.Event, bool) {
+	currentState.mutex.Lock()
+	defer currentState.mutex.Unlock()
 	if localEvent, ok := currentState.data[event]; ok {
 		return localEvent, true
 	}
 	return nostr.Event{}, false
 }
 
-func FetchEventPack(eventPack []string) (events []mindmachine.Event, ok bool) {
+func filterOutAnythingNotRequiredToFetchFromRelays(input []string) (output []string) {
+	for _, s := range input {
+		if len(s) == 64 {
+			currentState.mutex.Lock()
+			if _, ok := currentState.data[s]; !ok {
+				output = append(output, s)
+			}
+			currentState.mutex.Unlock()
+		}
+	}
+	return
+}
+
+func fetchEventsFromRelays(inputEvents []string, relayList []string) (events map[string]nostr.Event, missing []string, ok bool) {
+	if len(relayList) < 1 || len(inputEvents) < 1 {
+		fmt.Printf("\nYou requested %d events from %d relays\n", len(inputEvents), len(relayList))
+		mindmachine.LogCLI("relayList and inputEvents must be greater than 0", 1)
+		return
+	}
+	events = make(map[string]nostr.Event)
+	if len(inputEvents) > 200 {
+		//fmt.Printf("\nevent pack length: %d is too long\n", len(inputEvents))
+		e, m, ok := fetchEventsFromRelays(inputEvents[:200], relayList)
+		if !ok {
+			return e, m, false
+		}
+		for _, event := range e {
+			events[event.ID] = event
+		}
+		e, m, ok = fetchEventsFromRelays(inputEvents[200:], relayList)
+		if !ok {
+			return e, m, false
+		}
+		for _, event := range e {
+			events[event.ID] = event
+		}
+		return events, missing, true
+	}
+
+	var temp = make(map[string]nostr.Event)
+	var filters nostr.Filters
+	filters = append(filters, nostr.Filter{IDs: inputEvents})
+	pool := nostr.NewRelayPool()
+	var relays []string
+	relays = append(relays, relayList...)
+	for _, s := range relays {
+		mindmachine.LogCLI(fmt.Sprintf("Connecting to relay %s to fetch %d events", s, len(inputEvents)), 3)
+		//fmt.Printf("\n\n%#v\n", inputEvents)
+		errchan := pool.Add(s, nostr.SimplePolicy{Read: true, Write: true})
+		go func() {
+			for err := range errchan {
+				mindmachine.LogCLI(err.Error(), 2)
+			}
+		}()
+	}
+	_, evts, unsub := pool.Sub(filters)
+	attempts := 0
+E:
+	for {
+		select {
+		case event := <-nostr.Unique(evts):
+			if mindmachine.Contains(inputEvents, event.ID) {
+				temp[event.ID] = event
+				if len(inputEvents) == len(temp) {
+					break E
+				}
+			}
+			continue
+		case <-time.After(time.Millisecond * 1000):
+			if len(inputEvents) == len(temp) {
+				break E
+			}
+			//break E
+			if len(inputEvents)+1 < attempts {
+				break E
+			}
+			attempts++
+			continue
+		}
+	}
+	unsub()
+
+	if len(inputEvents) != len(temp) {
+		var failed []string
+		for _, s := range inputEvents {
+			if _, ok := temp[s]; !ok {
+				failed = append(failed, s)
+			}
+		}
+		return events, failed, false
+	}
+	for _, id := range inputEvents {
+		n, ok := temp[id]
+		if ok {
+			events[n.ID] = n
+		}
+	}
+	return events, []string{}, true
+}
+
+func FetchEventPack(eventPack []string) (events []mindmachine.Event, k bool) {
+	relays := mindmachine.MakeOrGetConfig().GetStringSlice("relaysMust")
+	fetch := filterOutAnythingNotRequiredToFetchFromRelays(eventPack)
+	if len(fetch) > 0 {
+		e, missing, ok := fetchEventsFromRelays(fetch, relays)
+		if ok {
+			k = true
+			currentState.mutex.Lock()
+			for _, event := range e {
+				currentState.data[event.ID] = event
+			}
+			currentState.mutex.Unlock()
+			persist()
+		}
+		if len(missing) > 0 {
+			k = false
+			for _, s := range missing {
+				fmt.Println("nostrelay:34 " + s)
+			}
+			mindmachine.LogCLI("failed to get the events above, which are required to complete the eventPack", 2)
+		}
+	}
+
+	var lastMessageTypeIsBlock bool = true
+	var lastBlock = mindmachine.MakeOrGetConfig().GetInt64("ignitionHeight")
+	for _, id := range eventPack {
+		n, ok := currentState.data[id]
+		if ok {
+			events = append(events, mindmachine.ConvertToInternalEvent(&n))
+			lastMessageTypeIsBlock = false
+		}
+		if !ok {
+			if len(id) < 7 { //1000000!
+				//if height is last+1 cool, if height is last+x then last message MUST be a block
+				if height, err := cast.ToInt64E(id); err != nil {
+					mindmachine.LogCLI(err, 1)
+				} else {
+					if height == lastBlock+1 || height > lastBlock && lastMessageTypeIsBlock {
+						//cool
+						lastMessageTypeIsBlock = true
+						for lastBlock < height {
+							lastBlock++
+							b := makeBlock(lastBlock)
+							events = append(events, mindmachine.ConvertToInternalEvent(&b))
+						}
+					} else {
+						//cool story but wrong height
+						if height != 761151 {
+							mindmachine.LogCLI(fmt.Sprintf("invalid block in eventpack %d", height), 1)
+						}
+					}
+				}
+			} else {
+				mindmachine.LogCLI("this should not happen", 1)
+			}
+		}
+	}
+	var missing []string
+	var eventsIDs = make(map[string]struct{})
+	for _, s := range events {
+		eventsIDs[s.ID] = struct{}{}
+		if s.Kind == 125 {
+			if h, ok := s.GetSingleTag("height"); ok {
+				eventsIDs[h] = struct{}{}
+			}
+		}
+	}
+	for _, s := range eventPack {
+		if _, ok := eventsIDs[s]; !ok {
+			missing = append(missing)
+		}
+	}
+	if len(missing) == 0 {
+		k = true
+	} else {
+		k = false
+		for _, s := range missing {
+			fmt.Println(s)
+		}
+		mindmachine.LogCLI("The above events are missing from the Eventpack", 1)
+	}
+	return
+}
+
+func PublishMissingEvents() {
+	var allEvents = messagepack.GetRequired()
+	fmt.Printf("\nTotal required events: %d", len(allEvents))
+
+	for _, s := range append(mindmachine.MakeOrGetConfig().GetStringSlice("relaysMust"), mindmachine.MakeOrGetConfig().GetStringSlice("relaysOptional")...) {
+		missing := FindMissingEvents(allEvents, s)
+		if len(missing) > 0 {
+			pool := nostr.NewRelayPool()
+			errchan := pool.Add(s, nostr.SimplePolicy{Read: true, Write: true})
+			go func() {
+				for err := range errchan {
+					mindmachine.LogCLI(err.Error(), 2)
+				}
+			}()
+			for _, s2 := range missing {
+				currentState.mutex.Lock()
+				event, ok := currentState.data[s2]
+				if ok {
+					fmt.Printf("\nRelay %s is missing event %s", s, s2)
+					_, _, err := pool.PublishEvent(&event)
+					if err != nil {
+						mindmachine.LogCLI(err.Error(), 3)
+						break
+					}
+					//time.Sleep(time.Second)
+				} else {
+					fmt.Println(51)
+				}
+				currentState.mutex.Unlock()
+			}
+		}
+
+	}
+}
+
+func FindMissingEvents(eventPack []string, relay string) (missing []string) {
+	_, missing, _ = fetchEventPack(eventPack, false, []string{relay})
+	return missing
+}
+
+var fetchingMutex = &deadlock.Mutex{}
+
+func fetchEventPack(eventPack []string, tryLocalFirst bool, relayList []string) (events []mindmachine.Event, missing []string, ok bool) {
+	fetchingMutex.Lock()
+	defer fetchingMutex.Unlock()
+	//todo rebroadcast events to all relays
 	defer persist()
 	var temp = make(map[string]nostr.Event)
 	var failed []string
@@ -30,7 +263,8 @@ func FetchEventPack(eventPack []string) (events []mindmachine.Event, ok bool) {
 	var filters nostr.Filters
 	var idsToSubscribe []string
 	for _, s := range fetch {
-		if localEvent, ok := currentState.data[s]; ok {
+		currentState.mutex.Lock()
+		if localEvent, ok := currentState.data[s]; ok && tryLocalFirst {
 			temp[s] = localEvent
 		} else {
 			idsToSubscribe = append(idsToSubscribe, s)
@@ -39,6 +273,7 @@ func FetchEventPack(eventPack []string) (events []mindmachine.Event, ok bool) {
 			//}
 			//filters = append(filters, newFilter)
 		}
+		currentState.mutex.Unlock()
 	}
 	if len(idsToSubscribe) > 0 {
 		newFilter := nostr.Filter{
@@ -46,11 +281,16 @@ func FetchEventPack(eventPack []string) (events []mindmachine.Event, ok bool) {
 		}
 		filters = append(filters, newFilter)
 	}
-	//fmt.Printf("\n\n%#v\n", filters)
 	if len(filters) > 0 {
 		pool := nostr.NewRelayPool()
-		mindmachine.LogCLI("Connecting to relay pool", 3)
-		for _, s := range mindmachine.MakeOrGetConfig().GetStringSlice("relays") {
+		var relays []string
+		if len(relayList) > 0 {
+			relays = append(relays, relayList...)
+		} else {
+			relays = mindmachine.MakeOrGetConfig().GetStringSlice("relaysMust")
+		}
+		for _, s := range relays {
+			mindmachine.LogCLI(fmt.Sprintf("Connecting to relay %s", s), 3)
 			errchan := pool.Add(s, nostr.SimplePolicy{Read: true, Write: true})
 			go func() {
 				for err := range errchan {
@@ -58,27 +298,10 @@ func FetchEventPack(eventPack []string) (events []mindmachine.Event, ok bool) {
 				}
 			}()
 		}
-		defer func() {
-			for _, s := range mindmachine.MakeOrGetConfig().GetStringSlice("relays") {
-				pool.Remove(s)
-			}
-		}()
-		//errchan := pool.Add("wss://nostr.688.org/", nostr.SimplePolicy{Read: true, Write: true})
-		//go func() {
-		//	for err := range errchan {
-		//		fmt.Println(err.Error())
-		//	}
-		//}()
-
-		//relays := mindmachine.MakeOrGetConfig().GetStringSlice("relays")
-		//pool := initRelays(relays)
-		//pool := nostr.NewRelayPool()
-		//
-		//_ = pool.Add("wss://nostr.688.org/", nostr.SimplePolicy{Read: true, Write: true})
-		fmt.Printf("\nFetching Events:\n%#v\n", idsToSubscribe)
 		_, evts, unsub := pool.Sub(filters)
 		attempts := 0
 		gotResult := false
+	E:
 		for {
 			select {
 			case event := <-nostr.Unique(evts):
@@ -88,22 +311,21 @@ func FetchEventPack(eventPack []string) (events []mindmachine.Event, ok bool) {
 					gotResult = true
 				}
 				continue
-			case <-time.After(3 * time.Second):
+			case <-time.After((time.Second * 5) + (time.Second * time.Duration(len(eventPack)/20))):
 				if gotResult {
-					fmt.Println(116)
-					break
-				}
-				fmt.Println(118)
-				attempts++
-				if attempts > len(idsToSubscribe) {
-					break
+					break E
 				} else {
+					fmt.Println(118)
+					attempts++
+					if attempts > 2 {
+						break E
+					}
 					continue
 				}
 			}
-			break
 		}
 		unsub()
+		//fmt.Printf("\n\n%#v\n", eventPack)
 	}
 	for _, s := range fetch {
 		if _, ok := temp[s]; !ok {
@@ -142,17 +364,10 @@ func FetchEventPack(eventPack []string) (events []mindmachine.Event, ok bool) {
 
 		}
 	}
-	//if len(events) != len(eventPack) {
-	//	mindmachine.LogCLI("this should not happen", 0)
-	//}
 	if len(failed) > 0 {
-		for _, s := range failed {
-			fmt.Println("nostrelay:65 " + s)
-		}
-		mindmachine.LogCLI("failed to get the events above, which are required to complete the eventPack", 2)
-		return events, false
+		return events, failed, false
 	}
-	return events, true
+	return events, []string{}, true
 }
 
 func makeBlock(h int64) nostr.Event {

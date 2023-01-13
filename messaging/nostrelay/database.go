@@ -86,6 +86,8 @@ func CacheEventLocally(e nostr.Event) {
 
 func (s *db) upsert(i nostr.Event) {
 	mindmachine.LogCLI(fmt.Sprintf("Nostrelay upserting %s", i.ID), 4)
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	s.data[i.ID] = i
 }
 
@@ -100,6 +102,8 @@ func persist() {
 }
 
 func RepublishEverything() {
+	currentState.mutex.Lock()
+	defer currentState.mutex.Unlock()
 	for _, event := range currentState.data {
 		PublishEvent(event)
 	}

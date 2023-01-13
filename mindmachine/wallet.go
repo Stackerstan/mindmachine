@@ -151,15 +151,14 @@ func persistCurrentWallet() error {
 }
 
 func getWalletFromDisk() (w Wallet, ok bool) {
-
 	file, err := ioutil.ReadFile(MakeOrGetConfig().GetString("rootDir") + "wallet.dat")
 	if err != nil {
-		LogCLI(err.Error(), 3)
+		LogCLI(fmt.Sprintf("Error getting wallet file: %s", err.Error()), 2)
 		return Wallet{}, false
 	}
 	err = json.Unmarshal(file, &w)
 	if err != nil {
-		LogCLI(err.Error(), 3)
+		LogCLI(fmt.Sprintf("Error parsing wallet file: %s", err.Error()), 3)
 		return Wallet{}, false
 	}
 	return w, true

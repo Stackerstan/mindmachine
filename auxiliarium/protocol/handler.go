@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"mindmachine/consensus/identity"
+	"mindmachine/consensus/messagepack"
 	"mindmachine/consensus/shares"
 	"mindmachine/messaging/nostrelay"
 	"mindmachine/mindmachine"
@@ -182,6 +183,7 @@ func handleNew(event mindmachine.Event) (b bool) {
 			//todo validate text is Latin and has no markdown etc.
 			if textEvent, ok := nostrelay.FetchEventPack([]string{unmarshalled.Text}); ok {
 				if len(textEvent[0].Content) > 0 && len(textEvent[0].Content) <= 560 {
+					messagepack.AddRequired(textEvent[0].Nostr())
 					item.Text = unmarshalled.Text
 					valid++
 				}
