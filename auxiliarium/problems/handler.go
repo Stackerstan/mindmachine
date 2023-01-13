@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"mindmachine/consensus/identity"
+	"mindmachine/consensus/messagepack"
 	"mindmachine/messaging/nostrelay"
 	"mindmachine/mindmachine"
 )
@@ -58,13 +59,15 @@ func handleUpdate(event mindmachine.Event) bool {
 					updates++
 				}
 				if len(unmarshalled.Title) == 64 {
-					if _, ok := nostrelay.FetchEventPack([]string{unmarshalled.Title}); ok {
+					if t, ok := nostrelay.FetchEventPack([]string{unmarshalled.Title}); ok {
+						messagepack.AddRequired(t[0].Nostr())
 						targetItem.Title = unmarshalled.Title
 						updates++
 					}
 				}
 				if len(unmarshalled.Description) == 64 {
-					if _, ok := nostrelay.FetchEventPack([]string{unmarshalled.Description}); ok {
+					if d, ok := nostrelay.FetchEventPack([]string{unmarshalled.Description}); ok {
+						messagepack.AddRequired(d[0].Nostr())
 						targetItem.Description = unmarshalled.Description
 						updates++
 					}
@@ -164,10 +167,13 @@ func handleNew(event mindmachine.Event) bool {
 				ClaimedAt:   0,
 			}
 			if len(unmarshalled.Title) == 64 {
-				if _, ok := nostrelay.FetchEventPack([]string{unmarshalled.Title}); ok {
+				var et, ed mindmachine.Event
+				if t, ok := nostrelay.FetchEventPack([]string{unmarshalled.Title}); ok {
+					et = t[0]
 					item.Title = unmarshalled.Title
 					if len(unmarshalled.Description) == 64 {
-						if _, ok := nostrelay.FetchEventPack([]string{unmarshalled.Description}); ok {
+						if d, ok := nostrelay.FetchEventPack([]string{unmarshalled.Description}); ok {
+							ed = d[0]
 							item.Description = unmarshalled.Description
 						}
 					}
@@ -177,6 +183,8 @@ func handleNew(event mindmachine.Event) bool {
 							if parent.canHaveChildren() {
 								item.Parent = unmarshalled.Parent
 								currentState.upsert(item)
+								messagepack.AddRequired(et.Nostr())
+								messagepack.AddRequired(ed.Nostr())
 								return true
 							}
 						} else {

@@ -20,6 +20,15 @@ debug:
 	go mod tidy
 	~/go/bin/dlv debug cmd/mindmachine/*.go
 
+debugreset:
+	cp -R ~/mindmachine/data/nostrelay ~/mindmachine/
+	rm -rf ~/mindmachine/data
+	mkdir ~/mindmachine/data
+	cp -R ~/mindmachine/nostrelay ~/mindmachine/data/
+	rm -rf ~/mindmachine/nostrelay
+	go mod tidy
+	~/go/bin/dlv debug cmd/mindmachine/*.go
+
 reset:
 	cp -R ~/mindmachine/data/nostrelay ~/mindmachine/
 	rm -rf ~/mindmachine/data

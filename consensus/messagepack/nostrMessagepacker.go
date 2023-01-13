@@ -43,38 +43,8 @@ func packEvent(e nostr.Event) {
 			current.Messages = append(current.Messages, e.ID)
 		}
 	}
+	AddRequired(e)
 }
-
-//func eventResponder() {
-//	subscription := nostrelay.SubscribeToRequests("messagepack")
-//	for {
-//		select {
-//		case newSubscription := <-subscription:
-//			go func() {
-//				var start int64
-//				for _, filter := range newSubscription.Filters {
-//					for s, list := range filter.Tags {
-//						if s == "messagepack" {
-//							st, err := strconv.ParseInt(list[0], 10, 64)
-//							if err == nil {
-//								start = st
-//							}
-//						}
-//					}
-//				}
-//				if start >= mindmachine.MakeOrGetConfig().GetInt64("ignitionHeight") {
-//					//todo respond with an event containing an ordered list of event IDs and block heights that can be used to rebuild our state
-//					//events := GetMessagePacks(start)
-//					//fmt.Println(53)
-//					//for _, event := range events {
-//					//	newSubscription.Events <- event
-//					//}
-//				}
-//
-//			}()
-//		}
-//	}
-//}
 
 func StartBlock(block mindmachine.Event) {
 	mut.Lock()
