@@ -72,12 +72,19 @@ func fetchEventsFromRelays(inputEvents []string, relayList []string) (events map
 		errchan := pool.Add(s, nostr.SimplePolicy{Read: true, Write: true})
 		go func() {
 			for err := range errchan {
-				mindmachine.LogCLI(err.Error(), 2)
+				e := fmt.Sprintf("j8453: %s", err.Error())
+				mindmachine.LogCLI(e, 2)
 			}
 		}()
 	}
+	go func() {
+		for n := range pool.Notices {
+			e := fmt.Sprintf("f345: relay: %s notice: %s", n.Relay, n.Message)
+			mindmachine.LogCLI(e, 4)
+		}
+	}()
 	_, evts, unsub := pool.Sub(filters)
-	attempts := 0
+	//attempts := 0
 E:
 	for {
 		select {
@@ -89,16 +96,19 @@ E:
 				}
 			}
 			continue
-		case <-time.After(time.Millisecond * 1000):
+		case <-time.After(time.Second * 10):
 			if len(inputEvents) == len(temp) {
 				break E
 			}
-			//break E
-			if len(inputEvents)+1 < attempts {
-				break E
-			}
-			attempts++
-			continue
+			fmt.Println("y078345")
+			fmt.Println(len(inputEvents))
+			fmt.Println(len(temp))
+			break E
+			//if len(inputEvents)+1 < attempts {
+			//	break E
+			//}
+			//attempts++
+			//continue
 		}
 	}
 	unsub()
@@ -110,7 +120,15 @@ E:
 				failed = append(failed, s)
 			}
 		}
-		return events, failed, false
+		time.Sleep(time.Second * 5) //give time for transient network problems to recover
+		e, m, ok := fetchEventsFromRelays(failed, relayList)
+		if ok {
+			for _, event := range e {
+				temp[event.ID] = event
+			}
+		} else {
+			return events, m, false
+		}
 	}
 	for _, id := range inputEvents {
 		n, ok := temp[id]
@@ -125,20 +143,18 @@ func FetchEventPack(eventPack []string) (events []mindmachine.Event, k bool) {
 	relays := mindmachine.MakeOrGetConfig().GetStringSlice("relaysMust")
 	fetch := filterOutAnythingNotRequiredToFetchFromRelays(eventPack)
 	if len(fetch) > 0 {
-		e, missing, ok := fetchEventsFromRelays(fetch, relays)
-		if ok {
-			k = true
-			currentState.mutex.Lock()
-			for _, event := range e {
-				currentState.data[event.ID] = event
-			}
-			currentState.mutex.Unlock()
-			persist()
+		e, missing, _ := fetchEventsFromRelays(fetch, relays)
+		currentState.mutex.Lock()
+		for _, event := range e {
+			currentState.data[event.ID] = event
 		}
+		currentState.mutex.Unlock()
+		persist()
+
 		if len(missing) > 0 {
 			k = false
 			for _, s := range missing {
-				fmt.Println("nostrelay:34 " + s)
+				fmt.Println("j87y8: " + s)
 			}
 			mindmachine.LogCLI("failed to get the events above, which are required to complete the eventPack", 2)
 		}
@@ -216,7 +232,8 @@ func PublishMissingEvents() {
 			errchan := pool.Add(s, nostr.SimplePolicy{Read: true, Write: true})
 			go func() {
 				for err := range errchan {
-					mindmachine.LogCLI(err.Error(), 2)
+					e := fmt.Sprintf("d23k9y5: %s", err.Error())
+					mindmachine.LogCLI(e, 2)
 				}
 			}()
 			for _, s2 := range missing {
@@ -294,7 +311,8 @@ func fetchEventPack(eventPack []string, tryLocalFirst bool, relayList []string) 
 			errchan := pool.Add(s, nostr.SimplePolicy{Read: true, Write: true})
 			go func() {
 				for err := range errchan {
-					mindmachine.LogCLI(err.Error(), 2)
+					e := fmt.Sprintf("k23459: %s", err.Error())
+					mindmachine.LogCLI(e, 2)
 				}
 			}()
 		}
