@@ -23,6 +23,7 @@ import (
 	"mindmachine/messaging/eventcatcher"
 	"mindmachine/messaging/nostrelay"
 	"mindmachine/mindmachine"
+	"mindmachine/scumclass/eventbucket"
 )
 
 // cliListener is a cheap and nasty way to speed up development cycles. It listens for keypresses and executes commands.
@@ -298,6 +299,10 @@ func cliListener(interrupt chan struct{}) {
 			event, ok := nostrelay.FetchLocalCachedEvent("9e333343184fe3e98b028782f7098cf596f1f46adf546541e7317d9a5f1d5d57")
 			if ok {
 				nostrelay.PublishEvent(event)
+			}
+		case "I":
+			for _, kind := range eventbucket.GetNumberOfKinds() {
+				fmt.Printf("Kind: %d Count: %d\n", kind.Kind, kind.Count)
 			}
 		}
 	}

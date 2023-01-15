@@ -36,10 +36,10 @@ func prune(input []string) (output []string) {
 	var failedRelayMap = make(map[string]struct{})
 	var processing int64
 	for _, s := range input {
-		for processing >= 10 {
-			//limit the number of relays we test concurrently
-			<-time.After(time.Millisecond * 100)
-		}
+		//for processing >= 10 {
+		//	//limit the number of relays we test concurrently
+		//	<-time.After(time.Millisecond * 500)
+		//}
 		wait.Add(1)
 		processing++
 		go func(relay string) {
@@ -63,7 +63,7 @@ func prune(input []string) (output []string) {
 				select {
 				case <-nostr.Unique(evnts):
 					break L
-				case <-time.After(time.Second * 10):
+				case <-time.After(time.Second * 2):
 					failedRelays <- relay
 					break L
 				case <-failed:
@@ -73,6 +73,7 @@ func prune(input []string) (output []string) {
 			}
 			//fmt.Println("relays.go:74")
 			unsub()
+			pool.Remove(relay)
 			processing--
 			wait.Done()
 		}(s)
@@ -89,7 +90,6 @@ func prune(input []string) (output []string) {
 					output = append(output, s)
 				}
 			}
-			fmt.Println("relays.go:91")
 			return
 		}
 	}
