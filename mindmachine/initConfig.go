@@ -1,24 +1,25 @@
-package main
+package mindmachine
 
 import (
+	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/spf13/viper"
-	"mindmachine/mindmachine"
 )
 
-// initConfig sets up our Viper config object
-func initConfig(config *viper.Viper) {
+// InitConfig sets up our Viper config object
+func InitConfig(config *viper.Viper) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		mindmachine.LogCLI(err.Error(), 0)
+		LogCLI(err.Error(), 0)
 	}
 	config.SetDefault("rootDir", homeDir+"/mindmachine/")
 	config.SetConfigType("yaml")
 	config.SetConfigFile(config.GetString("rootDir") + "config.yaml")
 	err = config.ReadInConfig()
 	if err != nil {
-		mindmachine.LogCLI(err.Error(), 4)
+		LogCLI(err.Error(), 4)
 	}
 	config.SetDefault("firstRun", true)
 	config.SetDefault("flatFileDir", "data/")
@@ -39,13 +40,18 @@ func initConfig(config *viper.Viper) {
 	config.SetDefault("highly_reliable", false)
 	config.SetDefault("forceBlocks", false)
 	config.SetDefault("relaysMust", []string{"wss://nostr.688.org"})
-	config.SetDefault("relaysOptional", []string{"ws://127.0.0.1:8100", "wss://nostr-pub.wellorder.net", "wss://nostr.walletofsatoshi.com", "wss://nostr.bongbong.com"})
+	if optionalRelays, ok := getOptionalRelays(); ok {
+		fmt.Println(44)
+		fmt.Println(len(optionalRelays))
+		config.SetDefault("relaysOptional", optionalRelays)
+		config.Set("relaysOptional", optionalRelays)
+	}
 	// Create our working directory and config file if not exist
 	initRootDir(config)
-	mindmachine.Touch(config.GetString("rootDir") + "config.yaml")
+	Touch(config.GetString("rootDir") + "config.yaml")
 	err = config.WriteConfig()
 	if err != nil {
-		mindmachine.LogCLI(err.Error(), 0)
+		LogCLI(err.Error(), 0)
 	}
 }
 
@@ -54,7 +60,27 @@ func initRootDir(conf *viper.Viper) {
 	if os.IsNotExist(err) {
 		err = os.Mkdir(conf.GetString("rootDir"), 0755)
 		if err != nil {
-			mindmachine.LogCLI(err, 0)
+			LogCLI(err, 0)
 		}
 	}
+}
+
+func getOptionalRelays() ([]string, bool) {
+	LogCLI("fetching optional relays from nostr-watch", 4)
+	response, err := http.Get("https://raw.githubusercontent.com/dskvr/nostr-watch/main/relays.yaml")
+	defer response.Body.Close()
+	if err == nil {
+		if response.StatusCode == http.StatusOK {
+			config := viper.New()
+			config.SetConfigType("yaml")
+			err = config.ReadConfig(response.Body)
+			if err == nil {
+				relays := config.GetStringSlice("relays")
+				if len(relays) > 0 {
+					return relays, true
+				}
+			}
+		}
+	}
+	return []string{}, false
 }

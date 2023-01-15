@@ -21,6 +21,7 @@ import (
 )
 
 func main() {
+	mindmachine.SetMaxOpenFiles()
 	delve := false //problem: keep forgetting to turn this off after debug
 	runtrace := false
 	deadlock.Opts.DisableLockOrderDetection = true
@@ -48,8 +49,7 @@ func main() {
 	conf := viper.New()
 
 	// Now we initialise this configuration with basic settings that are required on startup.
-	initConfig(conf)
-
+	mindmachine.InitConfig(conf)
 	// make the config accessible globally
 	mindmachine.SetConfig(conf)
 	if mindmachine.MakeOrGetConfig().GetBool("firstRun") {

@@ -84,6 +84,7 @@ var startedRelays = false
 var publishQueue = make(chan nostr.Event)
 
 func startRelaysForPublishing() {
+	mindmachine.PruneDeadOptionalRelays()
 	relays := mindmachine.MakeOrGetConfig().GetStringSlice("relaysMust")
 	relays = append(relays, mindmachine.MakeOrGetConfig().GetStringSlice("relaysOptional")...)
 	//pool := initRelays(relays)
@@ -93,7 +94,8 @@ func startRelaysForPublishing() {
 		errchan := pool.Add(s, nostr.SimplePolicy{Read: true, Write: true})
 		go func() {
 			for err := range errchan {
-				mindmachine.LogCLI(err.Error(), 2)
+				e := fmt.Sprintf("j49fk: %s", err.Error())
+				mindmachine.LogCLI(e, 2)
 			}
 		}()
 	}

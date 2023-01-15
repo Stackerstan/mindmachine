@@ -10,12 +10,16 @@ import (
 	"mindmachine/consensus/messagepack"
 	"mindmachine/messaging/blocks"
 	"mindmachine/mindmachine"
+	"mindmachine/scumclass/eventbucket"
 )
 
 func FetchLocalCachedEvent(event string) (nostr.Event, bool) {
 	currentState.mutex.Lock()
 	defer currentState.mutex.Unlock()
 	if localEvent, ok := currentState.data[event]; ok {
+		return localEvent, true
+	}
+	if localEvent, ok := eventbucket.Fetch(event); ok {
 		return localEvent, true
 	}
 	return nostr.Event{}, false
@@ -70,12 +74,17 @@ func fetchEventsFromRelays(inputEvents []string, relayList []string) (events map
 		mindmachine.LogCLI(fmt.Sprintf("Connecting to relay %s to fetch %d events", s, len(inputEvents)), 3)
 		//fmt.Printf("\n\n%#v\n", inputEvents)
 		errchan := pool.Add(s, nostr.SimplePolicy{Read: true, Write: true})
-		go func() {
+		go func(relay string) {
 			for err := range errchan {
 				e := fmt.Sprintf("j8453: %s", err.Error())
 				mindmachine.LogCLI(e, 2)
+				if mindmachine.Contains(mindmachine.MakeOrGetConfig().GetStringSlice("relaysMust"), relay) {
+					report := fmt.Sprintf("We cannot reach %s try restarting with make reset and log an issue if this continues", relay)
+					mindmachine.LogCLI(report, 2)
+					mindmachine.Shutdown()
+				}
 			}
-		}()
+		}(s)
 	}
 	go func() {
 		for n := range pool.Notices {

@@ -22,6 +22,7 @@ import (
 	"mindmachine/messaging/blocks"
 	"mindmachine/messaging/nostrelay"
 	"mindmachine/mindmachine"
+	"mindmachine/scumclass/eventbucket"
 )
 
 func Start(terminate chan struct{}, wg *sync.WaitGroup) {
@@ -42,10 +43,11 @@ func Start(terminate chan struct{}, wg *sync.WaitGroup) {
 	//	mindmachine.LogCLI("it worked", 3)
 	//	mindmachine.Shutdown()
 	//}
-	//mindmachine.PruneDeadOptionalRelays()
+	mindmachine.PruneDeadOptionalRelays()
 	if !samizdatStarted {
 		subscribeToSamizdat()
 	}
+	go SubscribeToAllEvents(terminate, wg)
 	fetchEventPackLooper()
 	if blocksBehind() > 1 {
 		if shares.VotePowerForAccount(mindmachine.MyWallet().Account) > 0 && mindmachine.MakeOrGetConfig().GetBool("forceBlocks") {
@@ -135,6 +137,7 @@ func fetchEventPackLooper() {
 //todo return the height of the resulting state, and if it isn't the current bitcoin tip try again. If we have votepower and we can't get any higher, start populating blocks.
 //whenever we fall behind the current tip, try to fetch event pack again
 func fetchLatest640001() {
+	//todo: also search relaysOptional if relaysMust fails
 	//return
 	mindmachine.LogCLI("Looking for a kind 640001 Event to catch up to our peers", 4)
 	if !fetching {
@@ -151,32 +154,10 @@ func fetchLatest640001() {
 		//relays = append(relays, mindmachine.MakeOrGetConfig().GetStringSlice("relaysOptional")...)
 		for _, s := range relays {
 			errchan := pool.Add(s, nostr.SimplePolicy{Read: true, Write: true})
-			rewriteConfigMutex := &deadlock.Mutex{}
 			go func(s string) {
 				for err := range errchan {
-					if strings.Contains(err.Error(), "failed") {
-						fmt.Println(370)
-						rewriteConfigMutex.Lock()
-						relays := mindmachine.MakeOrGetConfig().GetStringSlice("relaysOptional")
-						fmt.Printf("\nlength of relays: %d\n", len(relays))
-						newRelays := []string{}
-						for _, relay := range relays {
-							if relay != s {
-								newRelays = append(newRelays, relay)
-							}
-						}
-						if len(relays) == len(newRelays) {
-							fmt.Println(380)
-						}
-						mindmachine.MakeOrGetConfig().SetDefault("relaysOptional", newRelays)
-						mindmachine.MakeOrGetConfig().Set("relaysOptional", newRelays)
-						//mindmachine.MakeOrGetConfig().WriteConfigAs("newconfig.yaml")
-						if err := mindmachine.MakeOrGetConfig().WriteConfig(); err != nil {
-							mindmachine.LogCLI(err.Error(), 2)
-						}
-						rewriteConfigMutex.Unlock()
-					}
-					mindmachine.LogCLI(fmt.Sprintf("%s %s", err.Error(), s), 2)
+					e := fmt.Sprintf("rvyg65: %s", err.Error())
+					mindmachine.LogCLI(fmt.Sprintf("%s %s", e, s), 2)
 				}
 			}(s)
 		}
@@ -354,7 +335,8 @@ func subscribeToSamizdat() {
 			errchan := pool.Add(s, nostr.SimplePolicy{Read: true, Write: true})
 			go func() {
 				for err := range errchan {
-					mindmachine.LogCLI(err.Error(), 2)
+					e := fmt.Sprintf("2f3kut9: %s", err.Error())
+					mindmachine.LogCLI(e, 2)
 				}
 			}()
 		}
@@ -388,6 +370,52 @@ func subscribeToSamizdat() {
 	}
 }
 
+func SubscribeToAllEvents(terminate chan struct{}, wg *sync.WaitGroup) {
+	eventbucket.StartDb(terminate, wg)
+	if len(mindmachine.MakeOrGetConfig().GetStringSlice("relaysOptional")) < 1 {
+		mindmachine.LogCLI("we do not have any optional relays, possible network problem", 2)
+		mindmachine.Shutdown()
+	}
+	pool := nostr.NewRelayPool()
+	mindmachine.LogCLI("Subscribing to Kind 1 Events", 3)
+	relays := mindmachine.MakeOrGetConfig().GetStringSlice("relaysOptional")
+	relays = append(relays, mindmachine.MakeOrGetConfig().GetStringSlice("relaysMust")...)
+	for _, s := range relays {
+		errchan := pool.Add(s, nostr.SimplePolicy{Read: true, Write: true})
+		go func(s string) {
+			for err := range errchan {
+				e := fmt.Sprintf("q9u8mtx: %s", err.Error())
+				mindmachine.LogCLI(fmt.Sprintf("%s %s", e, s), 2)
+			}
+		}(s)
+	}
+
+	filters := nostr.Filters{}
+	filters = append(filters, nostr.Filter{
+		//Kinds: []int{640001},
+	})
+	_, evnts, unsub := pool.Sub(filters)
+	go func() {
+	L:
+		for {
+			select {
+			case e := <-nostr.Unique(evnts):
+				if ok, _ := e.CheckSignature(); ok {
+					eventbucket.HandleEvent(mindmachine.ConvertToInternalEvent(&e))
+				}
+			case <-terminate:
+				unsub()
+				break L
+			case <-time.After(time.Second * 60):
+				unsub()
+				mindmachine.PruneDeadOptionalRelays()
+				go SubscribeToAllEvents(terminate, wg)
+				break L
+			}
+		}
+	}()
+}
+
 func startEventSubscription() {
 	if !started {
 		started = true
@@ -398,7 +426,8 @@ func startEventSubscription() {
 			errchan := pool.Add(s, nostr.SimplePolicy{Read: true, Write: true})
 			go func() {
 				for err := range errchan {
-					mindmachine.LogCLI(err.Error(), 2)
+					e := fmt.Sprintf("9u8034: %s", err.Error())
+					mindmachine.LogCLI(e, 2)
 				}
 			}()
 		}
@@ -514,7 +543,7 @@ func startEventSubscription() {
 					//}
 				} else {
 					if height > mindmachine.CurrentState().Processing.Height+1 {
-						mindmachine.PruneDeadOptionalRelays()
+						//mindmachine.PruneDeadOptionalRelays()
 						go fetchLatest640001()
 					}
 				}
@@ -700,6 +729,8 @@ func publishEventPack(opreturn string, force bool) {
 }
 
 func handleEventPack(events []mindmachine.Event) (states []mindmachine.HashSeq) {
+	//todo: problem: when shutting down we lose data because we keep processing events after databases have been closed
+	//solution: hook into the terminate channel and stop processing events if terminate is called
 	var skip bool
 	for _, event := range events {
 		if event.Kind == 125 {
@@ -716,16 +747,6 @@ func handleEventPack(events []mindmachine.Event) (states []mindmachine.HashSeq) 
 			if height == mindmachine.CurrentState().Processing.Height+1 {
 				skip = false
 			}
-
-			//debug reset
-			//if height > 703190 {
-			//	skip = true
-			//}
-			//if mindmachine.CurrentState().Processing.Height < height-1 {
-			//	fmt.Printf("\n2345kt34\ncurrent state%d\nevent height: %d\n", mindmachine.CurrentState().Processing.Height, height)
-			//	mindmachine.LogCLI("in57v56 this event pack starts too late", 0)
-			//	return
-			//}
 			continue
 		}
 		if !skip {
