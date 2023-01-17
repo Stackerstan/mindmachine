@@ -68,8 +68,9 @@ func initRootDir(conf *viper.Viper) {
 func getOptionalRelays() ([]string, bool) {
 	LogCLI("fetching optional relays from nostr-watch", 4)
 	response, err := http.Get("https://raw.githubusercontent.com/dskvr/nostr-watch/main/relays.yaml")
-	defer response.Body.Close()
+
 	if err == nil {
+		defer response.Body.Close()
 		if response.StatusCode == http.StatusOK {
 			config := viper.New()
 			config.SetConfigType("yaml")
@@ -81,6 +82,9 @@ func getOptionalRelays() ([]string, bool) {
 				}
 			}
 		}
+	} else {
+		LogCLI(err.Error(), 4)
 	}
+
 	return []string{}, false
 }
