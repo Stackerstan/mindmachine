@@ -392,9 +392,13 @@ func SubscribeToAllEvents(terminate chan struct{}, wg *sync.WaitGroup) {
 	}
 
 	filters := nostr.Filters{}
-	filters = append(filters, nostr.Filter{
-		//Kinds: []int{640001},
-	})
+	if mindmachine.MakeOrGetConfig().GetBool("limitedEventBucket") {
+		filters = append(filters, nostr.Filter{
+			Kinds: []int{0},
+		})
+	} else {
+		filters = append(filters, nostr.Filter{})
+	}
 	_, evnts, unsub := pool.Sub(filters)
 	go func() {
 	L:
