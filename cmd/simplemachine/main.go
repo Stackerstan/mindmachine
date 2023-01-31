@@ -56,6 +56,7 @@ func beforeStart() func() {
 	// make the config accessible globally
 	mindmachine.SetConfig(conf)
 	eventbucket.StartDb(terminator, wg)
+	//nostrkinds.StartDb(terminator, wg)
 	//go eventcatcher.SubscribeToAllEvents(terminator)
 
 	return func() {

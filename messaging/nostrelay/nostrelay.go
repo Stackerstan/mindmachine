@@ -107,12 +107,14 @@ func startRelaysForPublishing() {
 	for {
 		select {
 		case event := <-publishQueue:
-			e, _, err := pool.PublishEvent(&event)
-			time.Sleep(time.Second) //don't spam relays
-			//fmt.Printf("\n116\n%#v\n", &event)
-			if err != nil {
-				fmt.Printf("\n%#v\n", e)
-				mindmachine.LogCLI("failed to publish an event, see event above", 1)
+			if !mindmachine.MakeOrGetConfig().GetBool("doNotPropagate") {
+				e, _, err := pool.PublishEvent(&event)
+				time.Sleep(time.Second) //don't spam relays
+				//fmt.Printf("\n116\n%#v\n", &event)
+				if err != nil {
+					fmt.Printf("\n%#v\n", e)
+					mindmachine.LogCLI("failed to publish an event, see event above", 1)
+				}
 			}
 		}
 	}
@@ -250,16 +252,22 @@ func handleWebsocket() func(http.ResponseWriter, *http.Request) {
 						//if etag, eTagExists := sub.Filters[0].Tags["e"]; eTagExists {
 						//	go batchETagProxyRequests(etag, sub.Events)
 						//}
-
+						foundMind := false
 					Mind:
 						for mind, c := range subscriptions {
 							for _, filter := range sub.Filters {
 								for s2, _ := range filter.Tags {
 									if s2 == mind {
 										c <- sub
+										foundMind = true
 										continue Mind
 									}
 								}
+							}
+						}
+						if !foundMind {
+							if c, ok := subscriptions["all"]; ok {
+								c <- sub
 							}
 						}
 						go func(sub Subscription) {

@@ -13,6 +13,7 @@ import (
 	"mindmachine/consensus/sequence"
 	"mindmachine/consensus/shares"
 	"mindmachine/mindmachine"
+	"mindmachine/scumclass/nostrkinds"
 )
 
 var handlerMutex = &deadlock.Mutex{}
@@ -61,6 +62,8 @@ func handleEvent(e mindmachine.Event) (h mindmachine.HashSeq, b bool) {
 			return shares.HandleEvent(e)
 		case "doki":
 			return doki.HandleEvent(e)
+		case "nostrkinds":
+			return nostrkinds.HandleEvent(e)
 		default:
 			//fmt.Printf("\n%#v\n", e)
 			//mindmachine.LogCLI("invalid event", 2)

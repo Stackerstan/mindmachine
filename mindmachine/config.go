@@ -2,7 +2,9 @@ package mindmachine
 
 import (
 	"fmt"
+	"os"
 	"strconv"
+	"time"
 
 	"github.com/sasha-s/go-deadlock"
 	"github.com/spf13/viper"
@@ -34,9 +36,21 @@ func Shutdown() {
 	LogCLI("Calling Shutdown", 2)
 	select {
 	case <-currentState.Shutdown:
+		return
 	default:
 		close(currentState.Shutdown)
+		break
 	}
+	go func() {
+		LogCLI("Shutting down at block "+fmt.Sprint(CurrentState().Processing.Height)+". If any databases fail to close gracefully within 120 seconds they will be destroyed.", 4)
+		//If everything goes well, closing the interrupt channel should shutdown cleanly before terminating.
+		//If something goes wrong we kill the process
+		time.Sleep(time.Second * 120)
+		println("Something didn't shutdown cleanly. In addition to whatever problem caused this, our " +
+			"data is probably corrupt like our leaders.")
+		os.Exit(0)
+	}()
+	return
 }
 
 func RegisterShutdownChan(shutdown chan struct{}) {
