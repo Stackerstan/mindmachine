@@ -23,6 +23,7 @@ import (
 	"mindmachine/messaging/nostrelay"
 	"mindmachine/mindmachine"
 	"mindmachine/scumclass/eventbucket"
+	"mindmachine/scumclass/nostrkinds"
 )
 
 func Start() {
@@ -32,9 +33,13 @@ func Start() {
 
 func startResponding() {
 	subs := nostrelay.SubscribeToRequests("eventer")
+	all := nostrelay.SubscribeToRequests("all")
 	for {
 		select {
 		case newSub := <-subs:
+			go handleSubscription(newSub)
+		case newSub := <-all:
+			fmt.Printf("\n%#v\n", newSub.Filters)
 			go handleSubscription(newSub)
 		}
 	}
@@ -90,12 +95,71 @@ func handleSubscription(sub nostrelay.Subscription) {
 						sub.Events <- event
 					}
 					close(sub.Terminate)
+				case "kinds":
+					for _, event := range getAllEventKinds() {
+						sub.Events <- event
+					}
+					close(sub.Terminate)
 				default:
 					close(sub.Terminate)
+				}
+				return
+			}
+		}
+		fmt.Println(101)
+		if len(filter.Authors) > 0 {
+			fmt.Println(103)
+			if len(filter.Kinds) > 0 {
+				fmt.Println(105)
+				for _, kind := range filter.Kinds {
+					if kind == 0 {
+						fmt.Println(108)
+						var events []nostr.Event
+						for _, author := range filter.Authors {
+							if e, ok := eventbucket.GetKind0(author); ok {
+								events = append(events, e)
+							}
+						}
+						for _, event := range events {
+							fmt.Printf("\n%#v\n", event)
+							sub.Events <- event
+						}
+					}
 				}
 			}
 		}
 	}
+}
+
+func getAllEventKinds() (e []nostr.Event) {
+	kinds := nostrkinds.GetAll()
+	for _, kind := range kinds {
+		j, err := json.Marshal(kind)
+		if err != nil {
+			mindmachine.LogCLI(err.Error(), 1)
+		} else {
+			ev := nostr.Event{
+				PubKey:    mindmachine.MyWallet().Account,
+				CreatedAt: time.Now(),
+				Kind:      641899,
+				Tags:      nil,
+				Content:   fmt.Sprintf("%s", j),
+			}
+			ev.ID = ev.GetID()
+			ev.Sign(mindmachine.MyWallet().PrivateKey)
+			e = append(e, ev)
+		}
+	}
+	event := nostr.Event{
+		PubKey:    mindmachine.MyWallet().Account,
+		CreatedAt: time.Now(),
+		Kind:      641851,
+		Content:   "",
+	}
+	event.ID = event.GetID()
+	event.Sign(mindmachine.MyWallet().PrivateKey)
+	e = append(e, event)
+	return e
 }
 
 func getAllEventBucketKinds() (e []nostr.Event) {

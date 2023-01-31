@@ -11,6 +11,7 @@ import (
 
 	"github.com/sasha-s/go-deadlock"
 	"github.com/spf13/viper"
+	"mindmachine/consensus/messagepack"
 	"mindmachine/messaging/blocks"
 	"mindmachine/messaging/eventcatcher"
 	"mindmachine/messaging/eventers"
@@ -149,6 +150,7 @@ func debugTimeout(interrupt chan struct{}) {
 // startMinds: Any Minds that need to be running during normal operation
 // should be called directly or indirectly from here.
 func startMinds(terminator chan struct{}, wg *sync.WaitGroup, conf *viper.Viper) {
+	messagepack.Start(terminator, wg)
 	nostrelay.StartDb(terminator, wg)
 	eventcatcher.Start(terminator, wg)
 	eventers.Start()

@@ -33,10 +33,6 @@ func LogCLI(message interface{}, level int) {
 		debug.PrintStack()
 		l.Error("%v", message)
 		Shutdown()
-		go func() {
-			time.Sleep(time.Second * 10)
-			os.Exit(2)
-		}()
 	}
 
 }

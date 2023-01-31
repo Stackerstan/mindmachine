@@ -28,11 +28,10 @@ func InitConfig(config *viper.Viper) {
 	config.SetDefault("logActors", true)
 	config.SetDefault("devMode", false)
 	if config.GetBool("devMode") {
-		config.SetDefault("ignitionHeight", int64(0))
+		//config.SetDefault("ignitionHeight", int64(0))
 	}
-	if !config.GetBool("devMode") {
-		config.SetDefault("ignitionHeight", int64(761151))
-	}
+	config.SetDefault("doNotPropagate", false)
+	config.SetDefault("ignitionHeight", int64(761151))
 	config.SetDefault("websocketAddr", "0.0.0.0:1031")
 	config.SetDefault("fastSync", true)
 

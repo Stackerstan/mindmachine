@@ -9,6 +9,7 @@ package messagepack
 import (
 	"fmt"
 	"strconv"
+	"sync"
 
 	"github.com/sasha-s/go-deadlock"
 	"github.com/stackerstan/go-nostr"
@@ -87,6 +88,25 @@ func StartBlock(block mindmachine.Event) {
 
 //SealBlock writes the current state to disk and returns the number of messages written.
 func SealBlock(height int64) int64 {
+	//todo
+	//POTENTIAL DEADLOCK:
+	//Previous place where the lock was grabbed
+	//goroutine 35 lock 0x1966da8
+	//consensus/messagepack/nostrMessagepacker.go:119 messagepack.shutdown { mut.Lock() //don't unlock, we are shutting down and don't want to pack any more messages } <<<<<
+	//	consensus/messagepack/nostrMessagepacker.go:118 messagepack.shutdown { SealBlock(mindmachine.CurrentState().Processing.Height) }
+	//	consensus/messagepack/nostrMessagepacker.go:111 messagepack.Start.func1 { shutdown() }
+	//
+	//	Have been trying to lock it again for more than 30s
+	//	goroutine 187924 lock 0x1966da8
+	//	consensus/messagepack/nostrMessagepacker.go:91 messagepack.SealBlock { mut.Lock() } <<<<<
+	//	consensus/messagepack/nostrMessagepacker.go:90 messagepack.SealBlock { func SealBlock(height int64) int64 { }
+	//	messaging/eventcatcher/eventcatcher.go:640 eventcatcher.handleBlockHeader { messagepack.SealBlock(height - 1) }
+	//	messaging/eventcatcher/eventcatcher.go:107 eventcatcher.catchUpOnBlocks { } }
+	//	messaging/eventcatcher/eventcatcher.go:490 eventcatcher.startEventSubscription { } }
+	return sealBlock(height)
+}
+
+func sealBlock(height int64) int64 {
 	mut.Lock()
 	defer mut.Unlock()
 	current.mutex.Lock()
@@ -100,4 +120,20 @@ func SealBlock(height int64) int64 {
 	database.Write("messagepack", fmt.Sprintf("%d", height), marshal(&current))
 	current.sealed = true
 	return int64(len(current.Messages))
+}
+
+func Start(terminate chan struct{}, wg *sync.WaitGroup) {
+	wg.Add(1)
+	go func() {
+		select {
+		case <-terminate:
+			shutdown()
+			wg.Done()
+		}
+	}()
+}
+
+func shutdown() {
+	SealBlock(mindmachine.CurrentState().Processing.Height)
+	mut.Lock() //don't unlock, we are shutting down and don't want to pack any more messages
 }

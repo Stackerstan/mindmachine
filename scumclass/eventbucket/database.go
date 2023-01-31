@@ -41,7 +41,7 @@ func StartDb(terminate chan struct{}, wg *sync.WaitGroup) {
 		go start(terminate, wg, ready)
 		// when the database has started, the goroutine will close the `ready` channel.
 		<-ready //This channel listener blocks until closed by `start`.
-		mindmachine.LogCLI("Mindmachine Eventbucket Mind (scum class) has started", 4)
+		mindmachine.LogCLI("Eventbucket Mind (scum class) has started", 4)
 	}
 }
 
@@ -74,7 +74,7 @@ func start(terminate chan struct{}, wg *sync.WaitGroup, ready chan struct{}) {
 	//database.Write("eventbucket", "current", b)
 	//Tell upstream that we have finished shutting down the databases
 	wg.Done()
-	mindmachine.LogCLI("Mindmachine Eventbucket Mind has shut down", 4)
+	mindmachine.LogCLI("Eventbucket Mind (scum class) has shut down", 4)
 }
 
 func (s *db) restoreFromDisk(f *os.File) {
@@ -106,6 +106,33 @@ func Count() int64 {
 	return int64(len(currentState.data))
 }
 
+func GetKind0(pubkey string) (nostr.Event, bool) {
+	var events []nostr.Event
+	currentState.mutex.Lock()
+	defer currentState.mutex.Unlock()
+	for _, event := range currentState.data {
+		if event.Event.PubKey == pubkey {
+			if event.Kind == 0 {
+				events = append(events, event.Event)
+			}
+		}
+	}
+	var latest int64
+	var id string
+	for _, event := range events {
+		if event.CreatedAt.Unix() > latest {
+			latest = event.CreatedAt.Unix()
+			id = event.ID
+		}
+	}
+	for _, event := range events {
+		if event.ID == id {
+			return event, true
+		}
+	}
+	return nostr.Event{}, false
+}
+
 func GetNumberOfKinds() (k []Kind) {
 	currentState.mutex.Lock()
 	defer currentState.mutex.Unlock()
@@ -120,7 +147,7 @@ func GetNumberOfKinds() (k []Kind) {
 		})
 	}
 	sort.Slice(k, func(i, j int) bool {
-		return k[i].Kind > k[j].Kind
+		return k[i].Kind < k[j].Kind
 	})
 	return
 }

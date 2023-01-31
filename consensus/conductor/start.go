@@ -14,6 +14,7 @@ import (
 	"mindmachine/consensus/sequence"
 	"mindmachine/consensus/shares"
 	"mindmachine/mindmachine"
+	"mindmachine/scumclass/nostrkinds"
 )
 
 var ready = make(chan struct{})
@@ -58,6 +59,7 @@ func start(terminate chan struct{}, wg *sync.WaitGroup) {
 	patches.StartDb(terminateDatabases, databaseWg)
 	doki.StartDb(terminateDatabases, databaseWg)
 	samizdat.StartDb(terminateDatabases, databaseWg)
+	nostrkinds.StartDb(terminateDatabases, databaseWg)
 
 	//populate the bloom filter with all the events that we've seen so far so that we drop them if we see them again
 	for _, s := range messagepack.GetMessagePacks(mindmachine.MakeOrGetConfig().GetInt64("ignitionHeight")) {

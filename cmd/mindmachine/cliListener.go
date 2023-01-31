@@ -46,19 +46,7 @@ func cliListener(interrupt chan struct{}) {
 			}
 			fmt.Println("Key " + str + " is not bound to any test procedures. See main.cliListener for more details.")
 		case "q":
-			//close(interrupt)
 			mindmachine.Shutdown()
-			messagepack.SealBlock(mindmachine.CurrentState().Processing.Height)
-			go func() {
-				mindmachine.LogCLI("User requested to terminate at block: "+fmt.Sprint(mindmachine.CurrentState().Processing.Height), 4)
-				//If everything goes well, closing the interrupt channel should shutdown cleanly before terminating.
-				//If something goes wrong,
-				time.Sleep(time.Second * 10)
-				println("Something didn't shutdown cleanly. In addition to whatever problem caused this, our " +
-					"data is probably corrupt like our leaders.")
-				os.Exit(0)
-			}()
-			return //if we do not return here, we cannot ctrl+c in case of errors during shutdown
 		case "s":
 			s := shares.MapOfCurrentState()
 			fmt.Printf("%#v", s)

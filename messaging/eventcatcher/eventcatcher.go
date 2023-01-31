@@ -371,6 +371,7 @@ func subscribeToSamizdat() {
 }
 
 func SubscribeToAllEvents(terminate chan struct{}, wg *sync.WaitGroup) {
+	//todo: unsub, repopulate relays, and prune relays, then resub every block.
 	eventbucket.StartDb(terminate, wg)
 	if len(mindmachine.MakeOrGetConfig().GetStringSlice("relaysOptional")) < 1 {
 		mindmachine.LogCLI("we do not have any optional relays, possible network problem", 2)
