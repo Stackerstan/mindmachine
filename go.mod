@@ -19,7 +19,7 @@ require (
 	github.com/sergi/go-diff v1.2.0
 	github.com/spf13/cast v1.3.1
 	github.com/spf13/viper v1.8.1
-	github.com/stackerstan/go-nostr v0.0.1-0.20221231023424-1e78bc634c61
+	github.com/stackerstan/go-nostr v0.0.1-0.20230131080925-bf218e039588
 	github.com/tylertreat/BoomFilters v0.0.0-20210315201527-1a82519a3e43
 )
 
@@ -50,9 +50,9 @@ require (
 	github.com/subosito/gotenv v1.2.0 // indirect
 	github.com/tyler-smith/go-bip32 v1.0.0 // indirect
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
-	github.com/valyala/fastjson v1.6.3 // indirect
+	github.com/valyala/fastjson v1.6.4 // indirect
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
-	golang.org/x/exp v0.0.0-20221217163422-3c43f8badb15 // indirect
+	golang.org/x/exp v0.0.0-20230131013936-aae9b4e6329d // indirect
 	golang.org/x/net v0.0.0-20220722155237-a158d28d115b // indirect
 	golang.org/x/sys v0.1.0 // indirect
 	golang.org/x/text v0.3.7 // indirect
