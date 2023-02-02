@@ -19,14 +19,14 @@ require (
 	github.com/sergi/go-diff v1.2.0
 	github.com/spf13/cast v1.3.1
 	github.com/spf13/viper v1.8.1
-	github.com/stackerstan/go-nostr v0.0.1-0.20230131080925-bf218e039588
+	github.com/stackerstan/go-nostr v0.0.1-0.20230202035009-c261dc557441
 	github.com/tylertreat/BoomFilters v0.0.0-20210315201527-1a82519a3e43
 )
 
 require (
 	github.com/FactomProject/basen v0.0.0-20150613233007-fe3947df716e // indirect
 	github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec // indirect
-	github.com/SaveTheRbtz/generic-sync-map-go v0.0.0-20220414055132-a37292614db8 // indirect
+	github.com/SaveTheRbtz/generic-sync-map-go v0.0.0-20230201052002-6c5833b989be // indirect
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.2 // indirect
 	github.com/d4l3k/messagediff v1.2.1 // indirect
 	github.com/decred/dcrd/crypto/blake256 v1.0.0 // indirect
@@ -52,7 +52,7 @@ require (
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
 	github.com/valyala/fastjson v1.6.4 // indirect
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
-	golang.org/x/exp v0.0.0-20230131013936-aae9b4e6329d // indirect
+	golang.org/x/exp v0.0.0-20230131160201-f062dba9d201 // indirect
 	golang.org/x/net v0.0.0-20220722155237-a158d28d115b // indirect
 	golang.org/x/sys v0.1.0 // indirect
 	golang.org/x/text v0.3.7 // indirect
