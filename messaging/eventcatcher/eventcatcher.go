@@ -53,7 +53,7 @@ func Start(terminate chan struct{}, wg *sync.WaitGroup) {
 		if shares.VotePowerForAccount(mindmachine.MyWallet().Account) > 0 && mindmachine.MakeOrGetConfig().GetBool("forceBlocks") {
 			catchUpOnBlocks()
 		} else {
-			mindmachine.LogCLI("looks like the network has stalled and will require someone with Votepower > 0 to recover it. Check the Samizdat tree, telegram group, or try running again later.", 1)
+			mindmachine.LogCLI("looks like the network has stalled and will require someone with Votepower > 0 to recover it. Check the Samizdat tree, telegram group, or try running again later.", 2)
 			mindmachine.Shutdown()
 		}
 	}
@@ -121,13 +121,13 @@ func fetchEventPackLooper() {
 		if mindmachine.CurrentState().Processing.Height == 761151 {
 			fetchLatest640001()
 		}
-		if blocksBehind() > 1 && attempts < 4 {
+		if blocksBehind() > 1 && attempts < 2 {
 			time.Sleep(time.Second * 2)
 			attempts++
 			fetchEventPackLooper()
 		}
-		if blocksBehind() > 1 && attempts == 4 {
-			mindmachine.LogCLI("we might be having problems fetching events from relays", 1)
+		if blocksBehind() > 1 && attempts == 2 {
+			mindmachine.LogCLI("we are "+fmt.Sprintf("%d", blocksBehind())+" blocks behind and we failed to find a kind 640001 event to catch up", 2)
 		}
 		return
 	}
@@ -488,7 +488,7 @@ func startEventSubscription() {
 						if shares.VotePowerForAccount(mindmachine.MyWallet().Account) > 0 {
 							catchUpOnBlocks()
 						} else {
-							mindmachine.LogCLI("looks like the network has stalled and will require someone with Votepower > 0 to recover it", 1)
+							mindmachine.LogCLI("looks like the network has stalled and will require someone with Votepower > 0 to recover it", 2)
 							mindmachine.Shutdown()
 						}
 					}

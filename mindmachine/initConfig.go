@@ -41,8 +41,6 @@ func InitConfig(config *viper.Viper) {
 	config.SetDefault("forceBlocks", false)
 	config.SetDefault("relaysMust", []string{"wss://nostr.688.org", "wss://15171031.688.org"})
 	if optionalRelays, ok := getOptionalRelays(); ok {
-		fmt.Println(44)
-		fmt.Println(len(optionalRelays))
 		config.SetDefault("relaysOptional", optionalRelays)
 		config.Set("relaysOptional", optionalRelays)
 	}

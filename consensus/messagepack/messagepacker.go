@@ -73,15 +73,22 @@ func GetMessagePacks(start int64) []string {
 	return GetMessagePacks(start)
 }
 
+var memory = make(map[int64]messagepack)
+
 func getMessagePack(height int64) (m messagepack, ok bool) {
-	file, ok := database.Open("messagepack", fmt.Sprintf("%d", height))
-	if !ok {
-		return
+	mp, mpok := memory[height]
+	if !mpok {
+		file, fok := database.Open("messagepack", fmt.Sprintf("%d", height))
+		if !fok {
+			return
+		}
+		defer file.Close()
+		if err := unmarshal(file, &m); err != nil {
+			mindmachine.LogCLI(err.Error(), 1)
+			return
+		}
+		memory[height] = m
+		return m, true
 	}
-	defer file.Close()
-	if err := unmarshal(file, &m); err != nil {
-		mindmachine.LogCLI(err.Error(), 1)
-		return
-	}
-	return m, true
+	return mp, true
 }

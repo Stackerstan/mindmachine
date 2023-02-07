@@ -234,7 +234,7 @@ func PublishMissingEvents() {
 	var allEvents = messagepack.GetRequired()
 	fmt.Printf("\nTotal required events: %d", len(allEvents))
 
-	for _, s := range append(mindmachine.MakeOrGetConfig().GetStringSlice("relaysMust"), mindmachine.MakeOrGetConfig().GetStringSlice("relaysOptional")...) {
+	for _, s := range mindmachine.MakeOrGetConfig().GetStringSlice("relaysMust") { //append(mindmachine.MakeOrGetConfig().GetStringSlice("relaysMust"), mindmachine.MakeOrGetConfig().GetStringSlice("relaysOptional")...) {
 		missing := FindMissingEvents(allEvents, s)
 		if len(missing) > 0 {
 			pool := nostr.NewRelayPool()
