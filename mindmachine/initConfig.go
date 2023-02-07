@@ -1,7 +1,6 @@
 package mindmachine
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 
