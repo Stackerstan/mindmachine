@@ -125,6 +125,7 @@ func fetchLatestBlockFromNetwork() (mindmachine.BlockHeader, error) {
 }
 
 func FetchBlock(h int64) (mindmachine.BlockHeader, error) {
+	mindmachine.LogCLI("Fetching a Block from Bitcoin relay", 4)
 	//fmt.Printf("\n120\n%d\n", h)
 	//defer fmt.Printf("\n121\n%d\n", h)
 	if h < 0 {
