@@ -39,7 +39,7 @@ func InitConfig(config *viper.Viper) {
 	//we usually lean towards errors being fatal to cause less damage to state. If this is set to true, we lean towards staying alive instead.
 	config.SetDefault("highly_reliable", false)
 	config.SetDefault("forceBlocks", false)
-	config.SetDefault("relaysMust", []string{"wss://nostr.688.org"})
+	config.SetDefault("relaysMust", []string{"wss://nostr.688.org", "wss://15171031.688.org"})
 	if optionalRelays, ok := getOptionalRelays(); ok {
 		fmt.Println(44)
 		fmt.Println(len(optionalRelays))
