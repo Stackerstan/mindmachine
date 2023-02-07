@@ -134,6 +134,7 @@ func Start(terminate chan struct{}, wg *sync.WaitGroup) {
 }
 
 func shutdown() {
+	deadlock.Opts.Disable = true
 	SealBlock(mindmachine.CurrentState().Processing.Height)
 	mut.Lock() //don't unlock, we are shutting down and don't want to pack any more messages
 }
