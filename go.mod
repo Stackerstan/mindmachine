@@ -19,7 +19,7 @@ require (
 	github.com/sergi/go-diff v1.2.0
 	github.com/spf13/cast v1.3.1
 	github.com/spf13/viper v1.8.1
-	github.com/stackerstan/go-nostr v0.0.1-0.20230202035009-c261dc557441
+	github.com/stackerstan/go-nostr v0.0.1-0.20230207065316-2706029260a5
 	github.com/tylertreat/BoomFilters v0.0.0-20210315201527-1a82519a3e43
 )
 

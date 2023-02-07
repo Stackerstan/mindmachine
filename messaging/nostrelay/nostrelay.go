@@ -86,11 +86,12 @@ var publishQueue = make(chan nostr.Event)
 func startRelaysForPublishing() {
 	mindmachine.PruneDeadOptionalRelays()
 	relays := mindmachine.MakeOrGetConfig().GetStringSlice("relaysMust")
-	relays = append(relays, mindmachine.MakeOrGetConfig().GetStringSlice("relaysOptional")...)
+	//relays = append(relays, mindmachine.MakeOrGetConfig().GetStringSlice("relaysOptional")...)
 	//pool := initRelays(relays)
 	pool := nostr.NewRelayPool()
 	mindmachine.LogCLI("Connecting to relay pool", 3)
 	for _, s := range relays {
+		mindmachine.LogCLI("Adding relay to pool: "+s, 3)
 		errchan := pool.Add(s, nostr.SimplePolicy{Read: true, Write: true})
 		go func() {
 			for err := range errchan {
@@ -107,15 +108,30 @@ func startRelaysForPublishing() {
 	for {
 		select {
 		case event := <-publishQueue:
-			if !mindmachine.MakeOrGetConfig().GetBool("doNotPropagate") {
-				e, _, err := pool.PublishEvent(&event)
-				time.Sleep(time.Second) //don't spam relays
-				//fmt.Printf("\n116\n%#v\n", &event)
-				if err != nil {
-					fmt.Printf("\n%#v\n", e)
-					mindmachine.LogCLI("failed to publish an event, see event above", 1)
-				}
+			//fmt.Println(event.ID)
+			//if !mindmachine.MakeOrGetConfig().GetBool("doNotPropagate") {
+			e, _, err := pool.PublishEvent(&event)
+			//go func(x chan nostr.PublishStatus) {
+			//X:
+			//	for {
+			//		select {
+			//		case y := <-x:
+			//			fmt.Println(y.Relay)
+			//			fmt.Println(y.Status)
+			//		case <-time.After(time.Second * 60):
+			//			break X
+			//		}
+			//	}
+			//
+			//}(x)
+			//fmt.Printf("\npublishing event %s\n" + event.ID)
+			time.Sleep(time.Millisecond * 100) //don't spam relays
+			//fmt.Printf("\n116\n%#v\n", &event)
+			if err != nil {
+				fmt.Printf("\n%#v\n", e)
+				mindmachine.LogCLI("failed to publish an event, see event above", 1)
 			}
+			//}
 		}
 	}
 }
