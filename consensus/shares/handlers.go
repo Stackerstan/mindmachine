@@ -81,17 +81,31 @@ func handle640204(event mindmachine.Event) (h mindmachine.HashSeq, b bool) {
 	if err != nil {
 		mindmachine.LogCLI(err.Error(), 3)
 	} else {
-		existing := currentState.data[event.PubKey]
+		fmt.Printf("\n84\n%#v\n", unmarshalled)
+		existing, ok := currentState.data[event.PubKey]
+		if !ok {
+			existing = Share{
+				LeadTimeLockedShares:   0,
+				LeadTime:               0,
+				LastLtChange:           mindmachine.MakeOrGetConfig().GetInt64("ignitionHeight"),
+				Expenses:               []Expense{},
+				LeadTimeUnlockedShares: 0,
+				OpReturnAddresses:      []string{},
+				Sequence:               0,
+			}
+		}
 		if existing.Sequence+1 == unmarshalled.Sequence {
 			if identity.IsUSH(event.PubKey) {
 				expense := Expense{
-					Problem:      unmarshalled.Problem,
-					Solution:     unmarshalled.Solution,
-					Amount:       unmarshalled.Amount,
-					WitnessedAt:  mindmachine.CurrentState().Processing.Height,
-					Ratifiers:    make(map[mindmachine.Account]struct{}),
-					Blackballers: make(map[mindmachine.Account]struct{}),
-					Approved:     false,
+					Problem:       unmarshalled.Problem,
+					CommitMsg:     unmarshalled.CommitMsg,
+					Solution:      unmarshalled.Solution,
+					Amount:        unmarshalled.Amount,
+					WitnessedAt:   mindmachine.CurrentState().Processing.Height,
+					Ratifiers:     make(map[mindmachine.Account]struct{}),
+					Blackballers:  make(map[mindmachine.Account]struct{}),
+					Approved:      false,
+					SharesCreated: 0,
 				}
 				expense.UID = expense.generateUID()
 				existing.Expenses = append(existing.Expenses, expense)
@@ -210,11 +224,24 @@ func (s *Share) updateExpenses() (b bool) {
 			//if approved, sweep into leadtimeunlocked shares
 			if expens.Approved {
 				s.LeadTimeUnlockedShares += expens.Amount
+				s.Expenses[i].Nth = getNth()
 				b = true
 			}
 		}
 	}
 	return
+}
+
+func getNth() int64 {
+	var latest int64
+	for _, share := range currentState.data {
+		for _, expens := range share.Expenses {
+			if expens.Nth > latest {
+				latest = expens.Nth
+			}
+		}
+	}
+	return latest + 1
 }
 
 func (s *Share) adjustLeadTime(option string) bool {

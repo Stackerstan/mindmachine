@@ -59,6 +59,11 @@ func Start(terminate chan struct{}, wg *sync.WaitGroup) {
 	}
 	go func() {
 		catchUpOnBlocks()
+		if shares.VotePowerForAccount(mindmachine.MyWallet().Account) > 0 {
+			opr := mindstate.OpReturn().OpReturn
+			publishEventPack(opr, false)
+		}
+		mindmachine.LogCLI("We have reached the current Bitcoin tip, waiting for miners. Tick tock, next block.", 4)
 		go startEventSubscription()
 	}()
 }

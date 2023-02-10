@@ -27,7 +27,7 @@ import (
 )
 
 func Start() {
-	mindmachine.LogCLI("Starting the Event Producer (eventers)", 4)
+	mindmachine.LogCLI("Starting the Event Producer. You should now be able to connect a frontend to this Mindmachine instance.", 4)
 	go startResponding()
 }
 
@@ -95,6 +95,11 @@ func handleSubscription(sub nostrelay.Subscription) {
 						sub.Events <- event
 					}
 					close(sub.Terminate)
+				case "shares":
+					for _, event := range getAllShares() {
+						sub.Events <- event
+					}
+					close(sub.Terminate)
 				case "kinds":
 					for _, event := range getAllEventKinds() {
 						sub.Events <- event
@@ -106,14 +111,10 @@ func handleSubscription(sub nostrelay.Subscription) {
 				return
 			}
 		}
-		fmt.Println(101)
 		if len(filter.Authors) > 0 {
-			fmt.Println(103)
 			if len(filter.Kinds) > 0 {
-				fmt.Println(105)
 				for _, kind := range filter.Kinds {
 					if kind == 0 {
-						fmt.Println(108)
 						var events []nostr.Event
 						for _, author := range filter.Authors {
 							if e, ok := eventbucket.GetKind0(author); ok {
@@ -121,7 +122,6 @@ func handleSubscription(sub nostrelay.Subscription) {
 							}
 						}
 						for _, event := range events {
-							fmt.Printf("\n%#v\n", event)
 							sub.Events <- event
 						}
 					}
@@ -129,6 +129,27 @@ func handleSubscription(sub nostrelay.Subscription) {
 			}
 		}
 	}
+}
+
+func getAllShares() (e []nostr.Event) {
+	//need shares on the frontend because we need the sequence number to create an expense
+	all := make(map[string]shares.Share)
+	for account, share := range shares.MapOfCurrentState() {
+		all[account] = share
+	}
+	j, err := json.Marshal(all)
+	if err != nil {
+		mindmachine.LogCLI(err.Error(), 1)
+	} else {
+		e = append(e, nostr.Event{
+			PubKey:    mindmachine.MyWallet().Account,
+			CreatedAt: time.Now(),
+			Kind:      640299,
+			Tags:      nil,
+			Content:   fmt.Sprintf("%s", j),
+		})
+	}
+	return
 }
 
 func getAllEventKinds() (e []nostr.Event) {

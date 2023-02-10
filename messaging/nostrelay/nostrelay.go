@@ -109,29 +109,29 @@ func startRelaysForPublishing() {
 		select {
 		case event := <-publishQueue:
 			//fmt.Println(event.ID)
-			//if !mindmachine.MakeOrGetConfig().GetBool("doNotPropagate") {
-			e, _, err := pool.PublishEvent(&event)
-			//go func(x chan nostr.PublishStatus) {
-			//X:
-			//	for {
-			//		select {
-			//		case y := <-x:
-			//			fmt.Println(y.Relay)
-			//			fmt.Println(y.Status)
-			//		case <-time.After(time.Second * 60):
-			//			break X
-			//		}
-			//	}
-			//
-			//}(x)
-			//fmt.Printf("\npublishing event %s\n" + event.ID)
-			time.Sleep(time.Millisecond * 100) //don't spam relays
-			//fmt.Printf("\n116\n%#v\n", &event)
-			if err != nil {
-				fmt.Printf("\n%#v\n", e)
-				mindmachine.LogCLI("failed to publish an event, see event above", 1)
+			if !mindmachine.MakeOrGetConfig().GetBool("doNotPropagate") {
+				e, x, err := pool.PublishEvent(&event)
+				go func(x chan nostr.PublishStatus) {
+				X:
+					for {
+						select {
+						case y := <-x:
+							fmt.Println(y.Relay)
+							fmt.Println(y.Status)
+						case <-time.After(time.Second * 60):
+							break X
+						}
+					}
+
+				}(x)
+				fmt.Printf("\npublishing event %d\n", event.ID)
+				time.Sleep(time.Millisecond * 100) //don't spam relays
+				//fmt.Printf("\n116\n%#v\n", &event)
+				if err != nil {
+					fmt.Printf("\n%#v\n", e)
+					mindmachine.LogCLI("failed to publish an event, see event above", 1)
+				}
 			}
-			//}
 		}
 	}
 }
