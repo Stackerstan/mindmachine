@@ -102,8 +102,8 @@ func persist() {
 }
 
 func RepublishEverything() {
-	currentState.mutex.Lock()
-	defer currentState.mutex.Unlock()
+	//currentState.mutex.Lock()
+	//defer currentState.mutex.Unlock()
 	for _, event := range currentState.data {
 		PublishEvent(event)
 	}
