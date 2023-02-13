@@ -245,34 +245,39 @@ func fetchLatest640001() {
 				}
 			}
 		}
+		eventPackToRebuildFrom := unmarshalled[idHighestSequence]
 		if idHighestBlock != idHighestSequence {
 			fmt.Printf("\nHighest Sequence:\n%#v\n\nHighest Block: \n%#v\n", unmarshalled[idHighestSequence], unmarshalled[idHighestBlock])
+			if unmarshalled[idHighestSequence].Height < unmarshalled[idHighestBlock].Height {
+				mindmachine.LogCLI("We have conflicting kind 640001 events. This could be a sign of an attempt to repair damage caused by a bug, but it's also possible that Stackerstan is under some form of attack.", 2)
+				mindmachine.LogCLI("We are rebuilding from the eventpack with the highest block. Some events have been purged from Stackerstan's state, you better figure out why.", 2)
+				eventPackToRebuildFrom = unmarshalled[idHighestBlock]
+			}
 		}
 		//idHighestSequence = "74e66d1a913f968c84a8afe176327ed91ac5bac92ef3c357c328ed04a1421cf7" //"edafbe657131fabc758f77a1fc7933a671b6fc542b97821235b98f7b8dd11f8e" //debug
-		highestSequenceEventPack := unmarshalled[idHighestSequence]
 		var alreadyCaughtUp bool
-		if mindmachine.Contains(caughtUpWith, highestSequenceEventPack.OpReturn) || mindmachine.Contains(caughtUpWith, idHighestSequence) {
+		if mindmachine.Contains(caughtUpWith, eventPackToRebuildFrom.OpReturn) || mindmachine.Contains(caughtUpWith, idHighestSequence) {
 			alreadyCaughtUp = true
 		}
-		if highestSequenceEventPack.Height > mindmachine.CurrentState().Processing.Height && !alreadyCaughtUp {
+		if eventPackToRebuildFrom.Height > mindmachine.CurrentState().Processing.Height && !alreadyCaughtUp {
 			mindmachine.LogCLI(fmt.Sprintf("Attempting to rebuild state from Event: %s at height %d", idHighestSequence, unmarshalled[idHighestSequence].Height), 4)
-			if orderedEventsToReplay, ok := nostrelay.FetchEventPack(highestSequenceEventPack.EventIDs); ok {
+			if orderedEventsToReplay, ok := nostrelay.FetchEventPack(eventPackToRebuildFrom.EventIDs); ok {
 				var failed bool
 				//todo add in any missing blocks between two block heights
 				//for creating: intercept current eventpack and remove all blocks between one block buffer between events which have blocks on one boundary
 
 				hashseqs := handleEventPack(orderedEventsToReplay)
-				for s, state := range highestSequenceEventPack.LatestState {
+				for s, state := range eventPackToRebuildFrom.LatestState {
 					if mindstate.GetLatestStates()[s].State != state.State {
 						fmt.Printf("\nours\n%#v\n\ntheirs\n%#v\n\n", mindstate.GetLatestStates()[s].State, state.State)
-						fmt.Printf("\nours\n%#v\n\ntheirs\n%#v\n\n", mindstate.GetLatestStates(), highestSequenceEventPack.LatestState)
+						fmt.Printf("\nours\n%#v\n\ntheirs\n%#v\n\n", mindstate.GetLatestStates(), eventPackToRebuildFrom.LatestState)
 						mindmachine.LogCLI("failed to get to the same state as the eventpack creator, try running make reset and see if it works next time, alternatively there are a few things we could try if this happens, go look at the eventcatcher code", 2)
 						failed = true
 					}
 				}
 				opr := mindstate.OpReturn().OpReturn
-				if opr != highestSequenceEventPack.OpReturn {
-					mindmachine.LogCLI("We reached a different OP_RETURN to the one provided. We have: "+opr+" eventpack has: "+highestSequenceEventPack.OpReturn, 1)
+				if opr != eventPackToRebuildFrom.OpReturn {
+					mindmachine.LogCLI("We reached a different OP_RETURN to the one provided. We have: "+opr+" eventpack has: "+eventPackToRebuildFrom.OpReturn, 1)
 					failed = true
 				}
 				if !failed {
