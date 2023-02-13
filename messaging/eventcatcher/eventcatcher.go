@@ -139,8 +139,8 @@ func fetchEventPackLooper() {
 	fetchEventPackLooper()
 }
 
-//todo return the height of the resulting state, and if it isn't the current bitcoin tip try again. If we have votepower and we can't get any higher, start populating blocks.
-//whenever we fall behind the current tip, try to fetch event pack again
+// todo return the height of the resulting state, and if it isn't the current bitcoin tip try again. If we have votepower and we can't get any higher, start populating blocks.
+// whenever we fall behind the current tip, try to fetch event pack again
 func fetchLatest640001() {
 	//todo: also search relaysOptional if relaysMust fails
 	//return
@@ -380,7 +380,10 @@ func SubscribeToAllEvents(terminate chan struct{}, wg *sync.WaitGroup) {
 	eventbucket.StartDb(terminate, wg)
 	if len(mindmachine.MakeOrGetConfig().GetStringSlice("relaysOptional")) < 1 {
 		mindmachine.LogCLI("we do not have any optional relays, possible network problem", 2)
-		mindmachine.Shutdown()
+		relaysMust := mindmachine.Prune(mindmachine.MakeOrGetConfig().GetStringSlice("relaysMust"))
+		if len(relaysMust) == 0 {
+			mindmachine.Shutdown()
+		}
 	}
 	pool := nostr.NewRelayPool()
 	mindmachine.LogCLI("Subscribing to Kind 1 Events", 3)

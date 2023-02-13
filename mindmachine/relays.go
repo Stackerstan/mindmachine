@@ -19,6 +19,12 @@ func PruneDeadOptionalRelays() {
 
 func pruneDeadRelays() {
 	relays := MakeOrGetConfig().GetStringSlice("relaysOptional")
+	if len(relays) == 0 {
+		if optionalRelays, ok := getOptionalRelays(); ok {
+			relays = optionalRelays
+		}
+
+	}
 	newRelays := prune(relays)
 	MakeOrGetConfig().SetDefault("relaysOptional", newRelays)
 	MakeOrGetConfig().Set("relaysOptional", newRelays)
@@ -28,7 +34,9 @@ func pruneDeadRelays() {
 	}
 	LogCLI(fmt.Sprintf("Pruned %d optional relays, we now have %d optional relays in the config file.", len(relays)-len(newRelays), len(newRelays)), 3)
 }
-
+func Prune(input []string) (output []string) {
+	return prune(input)
+}
 func prune(input []string) (output []string) {
 	//fmt.Println("relays.go:33")
 	wait := deadlock.WaitGroup{}
