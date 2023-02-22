@@ -19,6 +19,7 @@ type Expense struct {
 	Problem           string //ID of problem in the issue tracker (optional)
 	CommitMsg         string //The commit message from a merged patch on github or the patch chain. MUST NOT exceed 80 chars
 	Solution          string //For now, this MUST be a sha256 hash of the diff that is merged on github, later this hash will be used in the patch chain.
+	PullRequest       string //A link to a pull request. This SHOULD be deprecated as soon as possible and replaced with a Stackerstan object instead of an external link
 	Amount            int64  //Satoshi
 	RepaidAmount      int64
 	WitnessedAt       int64 //Height at which we saw this Expense being created
@@ -28,6 +29,7 @@ type Expense struct {
 	Blackballers      map[mindmachine.Account]struct{}
 	BlackballPermille int64
 	Approved          bool
+	Rejected          bool
 	SharesCreated     int64 //should be equal to the Amount in satoshi
 }
 
@@ -52,11 +54,12 @@ type Kind640202 struct {
 //Kind640204 STATUS:DRAFT
 //Used for creating an Expense request
 type Kind640204 struct {
-	Problem   string //ID of problem from problem tracker (optional)
-	CommitMsg string //<81 chars
-	Solution  string //hash of diff
-	Amount    int64  //amount being claimed in satoshi
-	Sequence  int64
+	Problem     string //ID of problem from problem tracker (optional)
+	CommitMsg   string //<81 chars
+	Solution    string //hash of diff
+	PullRequest string //A link to a pull request. This SHOULD be deprecated as soon as possible and replaced with a Stackerstan object instead of an external link
+	Amount      int64  //amount being claimed in satoshi
+	Sequence    int64
 }
 
 //Kind640206 STATUS:DRAFT

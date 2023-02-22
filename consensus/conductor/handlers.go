@@ -73,3 +73,10 @@ func handleEvent(e mindmachine.Event) (h mindmachine.HashSeq, b bool) {
 	mindmachine.LogCLI("this shouldn't happen", 0)
 	return
 }
+
+func EndOfBlockMaintainenceAndInvariantCheck() bool {
+	if !shares.NewBlock() {
+		return false
+	}
+	return true
+}

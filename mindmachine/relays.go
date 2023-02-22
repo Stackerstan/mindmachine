@@ -17,28 +17,36 @@ func PruneDeadOptionalRelays() {
 	pruneDeadRelays()
 }
 
-func pruneDeadRelays() {
-	relays := MakeOrGetConfig().GetStringSlice("relaysOptional")
-	if len(relays) == 0 {
-		if optionalRelays, ok := getOptionalRelays(); ok {
-			relays = optionalRelays
-		}
+var lastPrune time.Time
 
+func pruneDeadRelays() {
+	if time.Since(lastPrune) > (time.Second * 60 * 5) {
+		lastPrune = time.Now()
+		relays := MakeOrGetConfig().GetStringSlice("relaysOptional")
+		if len(relays) == 0 {
+			if optionalRelays, ok := getOptionalRelays(); ok {
+				relays = optionalRelays
+			}
+
+		}
+		newRelays := prune(relays)
+		MakeOrGetConfig().SetDefault("relaysOptional", newRelays)
+		MakeOrGetConfig().Set("relaysOptional", newRelays)
+		//MakeOrGetConfig().WriteConfigAs("newconfig.yaml")
+		if err := MakeOrGetConfig().WriteConfig(); err != nil {
+			LogCLI(err.Error(), 2)
+		}
+		LogCLI(fmt.Sprintf("Pruned %d optional relays, we now have %d optional relays in the config file.", len(relays)-len(newRelays), len(newRelays)), 3)
 	}
-	newRelays := prune(relays)
-	MakeOrGetConfig().SetDefault("relaysOptional", newRelays)
-	MakeOrGetConfig().Set("relaysOptional", newRelays)
-	//MakeOrGetConfig().WriteConfigAs("newconfig.yaml")
-	if err := MakeOrGetConfig().WriteConfig(); err != nil {
-		LogCLI(err.Error(), 2)
-	}
-	LogCLI(fmt.Sprintf("Pruned %d optional relays, we now have %d optional relays in the config file.", len(relays)-len(newRelays), len(newRelays)), 3)
 }
+
 func Prune(input []string) (output []string) {
 	return prune(input)
 }
 func prune(input []string) (output []string) {
-	//fmt.Println("relays.go:33")
+	fmt.Println("relays.go:33")
+	defer fmt.Println("relays.go:49")
+	//fmt.Println(input)
 	wait := deadlock.WaitGroup{}
 	failedRelays := make(chan string, len(input))
 	var failedRelayMap = make(map[string]struct{})
@@ -71,7 +79,7 @@ func prune(input []string) (output []string) {
 				select {
 				case <-nostr.Unique(evnts):
 					break L
-				case <-time.After(time.Second * 2):
+				case <-time.After(time.Second * 4):
 					failedRelays <- relay
 					break L
 				case <-failed:

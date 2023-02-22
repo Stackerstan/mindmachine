@@ -124,7 +124,7 @@ func startRelaysForPublishing() {
 					}
 
 				}(x)
-				fmt.Printf("\npublishing event %d\n", event.ID)
+				fmt.Printf("\npublishing event %s\n", event.ID)
 				time.Sleep(time.Millisecond * 100) //don't spam relays
 				//fmt.Printf("\n116\n%#v\n", &event)
 				if err != nil {

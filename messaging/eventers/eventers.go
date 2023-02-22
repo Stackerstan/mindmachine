@@ -39,7 +39,7 @@ func startResponding() {
 		case newSub := <-subs:
 			go handleSubscription(newSub)
 		case newSub := <-all:
-			fmt.Printf("\n%#v\n", newSub.Filters)
+			//fmt.Printf("\n%#v\n", newSub.Filters)
 			go handleSubscription(newSub)
 		}
 	}

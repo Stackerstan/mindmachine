@@ -383,10 +383,10 @@ func subscribeToSamizdat() {
 func SubscribeToAllEvents(terminate chan struct{}, wg *sync.WaitGroup) {
 	//todo: unsub, repopulate relays, and prune relays, then resub every block.
 	eventbucket.StartDb(terminate, wg)
-	if len(mindmachine.MakeOrGetConfig().GetStringSlice("relaysOptional")) < 1 {
-		mindmachine.LogCLI("we do not have any optional relays, possible network problem", 2)
+	if len(mindmachine.MakeOrGetConfig().GetStringSlice("relaysOptional")) == 0 {
 		relaysMust := mindmachine.Prune(mindmachine.MakeOrGetConfig().GetStringSlice("relaysMust"))
 		if len(relaysMust) == 0 {
+			mindmachine.LogCLI("we do not have any relays, possible network problem", 2)
 			mindmachine.Shutdown()
 		}
 	}
@@ -661,6 +661,9 @@ func handleBlockHeader(e mindmachine.Event, livemode bool) (int64, bool) {
 						publishEventPack(opr, false)
 					}
 					mindmachine.SetCurrentlyProcessing(e)
+					if !conductor.EndOfBlockMaintainenceAndInvariantCheck() {
+						mindmachine.LogCLI("An invariant check has failed", 0)
+					}
 					messagepack.StartBlock(e)
 					storeLastStartedBlock(e)
 					return height, true

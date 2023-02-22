@@ -7,6 +7,34 @@ import (
 	"mindmachine/mindmachine"
 )
 
+func NewBlock() bool {
+	currentState.mutex.Lock()
+	defer currentState.mutex.Unlock()
+	for account, share := range currentState.data {
+		currentState.data[account] = updateExpenses(share)
+	}
+	return validateInvariants()
+}
+
+func validateInvariants() bool {
+	var totalApprovedExpenses int64
+	var totalShares int64
+	for _, share := range currentState.data {
+		totalShares += share.LeadTimeUnlockedShares
+		totalShares += share.LeadTimeLockedShares
+		for _, expens := range share.Expenses {
+			if expens.Approved {
+				totalApprovedExpenses += expens.Amount
+			}
+		}
+	}
+	if totalShares-1 == totalApprovedExpenses {
+		return true
+	}
+	mindmachine.LogCLI("Invalid number of shares!", 1)
+	return false
+}
+
 //todo update sequencenumbers
 func HandleEvent(event mindmachine.Event) (h mindmachine.HashSeq, b bool) {
 	if sig, _ := event.CheckSignature(); !sig {
@@ -39,32 +67,34 @@ func handle640206(event mindmachine.Event) (h mindmachine.HashSeq, b bool) {
 	if err != nil {
 		mindmachine.LogCLI(err.Error(), 3)
 	} else {
-		existing := currentState.data[event.PubKey]
-		if existing.Sequence+1 == unmarshalled.Sequence {
-			if VotePowerForAccount(event.PubKey) > 0 {
-				if existingTarget, ok := currentState.data[unmarshalled.Account]; ok {
-					for i, expens := range existingTarget.Expenses {
+		if currentState.data[event.PubKey].Sequence+1 == unmarshalled.Sequence {
+			if votePowerForAccount(event.PubKey) > 0 {
+				if target, ok := currentState.data[unmarshalled.Account]; ok {
+					for i, expens := range target.Expenses {
 						if expens.UID == unmarshalled.UID {
-							if unmarshalled.Blackball && !unmarshalled.Ratify {
-								if _, ok := existingTarget.Expenses[i].Blackballers[event.PubKey]; !ok {
-									existingTarget.Expenses[i].Blackballers[event.PubKey] = struct{}{}
-									existingTarget.updateExpenses()
-									currentState.data[unmarshalled.Account] = existingTarget
-									existing.Sequence++
-									currentState.data[event.PubKey] = existing
-									return currentState.takeSnapshot(), true
+							if _, exists := target.Expenses[i].Blackballers[event.PubKey]; !exists {
+								if _, exists := target.Expenses[i].Ratifiers[event.PubKey]; !exists {
+									if unmarshalled.Blackball && !unmarshalled.Ratify {
+										target.Expenses[i].Blackballers[event.PubKey] = struct{}{}
+										t := updateExpenses(target)
+										currentState.data[unmarshalled.Account] = t
+										voter := currentState.data[event.PubKey]
+										voter.Sequence++
+										currentState.data[event.PubKey] = voter
+										return currentState.takeSnapshot(), true
+									}
+									if _, ok := target.Expenses[i].Ratifiers[event.PubKey]; !ok {
+										target.Expenses[i].Ratifiers[event.PubKey] = struct{}{}
+										t := updateExpenses(target)
+										currentState.data[unmarshalled.Account] = t
+										voter := currentState.data[event.PubKey]
+										voter.Sequence++
+										currentState.data[event.PubKey] = voter
+										return currentState.takeSnapshot(), true
+									}
 								}
 							}
-							if unmarshalled.Ratify && !unmarshalled.Blackball {
-								if _, ok := existingTarget.Expenses[i].Ratifiers[event.PubKey]; !ok {
-									existingTarget.Expenses[i].Ratifiers[event.PubKey] = struct{}{}
-									existingTarget.updateExpenses()
-									currentState.data[unmarshalled.Account] = existingTarget
-									existing.Sequence++
-									currentState.data[event.PubKey] = existing
-									return currentState.takeSnapshot(), true
-								}
-							}
+
 						}
 					}
 
@@ -81,7 +111,6 @@ func handle640204(event mindmachine.Event) (h mindmachine.HashSeq, b bool) {
 	if err != nil {
 		mindmachine.LogCLI(err.Error(), 3)
 	} else {
-		fmt.Printf("\n84\n%#v\n", unmarshalled)
 		existing, ok := currentState.data[event.PubKey]
 		if !ok {
 			existing = Share{
@@ -101,6 +130,7 @@ func handle640204(event mindmachine.Event) (h mindmachine.HashSeq, b bool) {
 					CommitMsg:     unmarshalled.CommitMsg,
 					Solution:      unmarshalled.Solution,
 					Amount:        unmarshalled.Amount,
+					PullRequest:   unmarshalled.PullRequest,
 					WitnessedAt:   mindmachine.CurrentState().Processing.Height,
 					Ratifiers:     make(map[mindmachine.Account]struct{}),
 					Blackballers:  make(map[mindmachine.Account]struct{}),
@@ -177,11 +207,10 @@ func handle640200(event mindmachine.Event) (h mindmachine.HashSeq, b bool) {
 	return
 }
 
-func (s *Share) updateExpenses() (b bool) {
-	//todo run this once per block against ALL shares, not just when we receive votes
+func updateExpenses(s Share) Share {
 	for i, expens := range s.Expenses {
 		//Add up the permille of blackballers and ratifiers
-		if !expens.Approved {
+		if !expens.Approved && !expens.Rejected {
 			expens.BlackballPermille = 0
 			for blackballer := range expens.Blackballers {
 				if bbshare, ok := currentState.data[blackballer]; ok {
@@ -201,7 +230,7 @@ func (s *Share) updateExpenses() (b bool) {
 			if activePeriod > 1008 {
 				if expens.BlackballPermille < 60 {
 					if expens.RatifyPermille > 666 {
-						s.Expenses[i].Approved = true
+						expens.Approved = true
 					}
 				}
 			}
@@ -209,7 +238,7 @@ func (s *Share) updateExpenses() (b bool) {
 			if activePeriod > 144 {
 				if expens.BlackballPermille == 0 {
 					if expens.RatifyPermille > 500 {
-						s.Expenses[i].Approved = true
+						expens.Approved = true
 					}
 				}
 			}
@@ -217,19 +246,31 @@ func (s *Share) updateExpenses() (b bool) {
 			if activePeriod > 0 {
 				if expens.BlackballPermille == 0 {
 					if expens.RatifyPermille > 900 {
-						s.Expenses[i].Approved = true
+						expens.Approved = true
 					}
 				}
+			}
+
+			if expens.BlackballPermille == 0 {
+				if expens.RatifyPermille == 1000 {
+					expens.Approved = true
+				}
+			}
+
+			if expens.BlackballPermille > 100 {
+				expens.Rejected = true
 			}
 			//if approved, sweep into leadtimeunlocked shares
 			if expens.Approved {
 				s.LeadTimeUnlockedShares += expens.Amount
-				s.Expenses[i].Nth = getNth()
-				b = true
+				expens.SharesCreated = expens.Amount
+				expens.Nth = getNth()
+				//b = true
 			}
+			s.Expenses[i] = expens
 		}
 	}
-	return
+	return s
 }
 
 func getNth() int64 {

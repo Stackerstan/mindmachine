@@ -48,8 +48,13 @@ func cliListener(interrupt chan struct{}) {
 		case "q":
 			mindmachine.Shutdown()
 		case "s":
-			s := shares.MapOfCurrentState()
-			fmt.Printf("%#v", s)
+			for account, share := range shares.MapOfCurrentState() {
+				fmt.Printf("Account: %s\nLeadTimeLockedShares: %d\nLeadTime: %d\nLeadTimeUnlockedShares: %d\nSequence: %d\n", account, share.LeadTimeLockedShares, share.LeadTime, share.LeadTimeUnlockedShares, share.Sequence)
+				fmt.Println("EXPENSES")
+				for _, expens := range share.Expenses {
+					fmt.Printf("\n%#v\n", expens)
+				}
+			}
 		case "w":
 			fmt.Printf("\nWallet:\n%#v\nVotePower: %d\nCurrent Block:%v\n", mindmachine.MyWallet(), shares.VotePowerForAccount(mindmachine.MyWallet().Account), mindmachine.CurrentState().Processing)
 		case "i":
