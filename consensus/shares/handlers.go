@@ -44,14 +44,15 @@ func HandleEvent(event mindmachine.Event) (h mindmachine.HashSeq, b bool) {
 		if identity.IsUSH(event.PubKey) {
 			currentState.mutex.Lock()
 			defer currentState.mutex.Unlock()
+			if event.Kind == 640204 {
+				return handle640204(event)
+			}
 			if _, ok := currentState.data[event.PubKey]; ok {
 				switch event.Kind {
 				case 640200:
 					return handle640200(event)
 				case 640202:
 					return handle640202(event)
-				case 640204:
-					return handle640204(event)
 				case 640206:
 					return handle640206(event)
 				}

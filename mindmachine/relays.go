@@ -44,8 +44,6 @@ func Prune(input []string) (output []string) {
 	return prune(input)
 }
 func prune(input []string) (output []string) {
-	fmt.Println("relays.go:33")
-	defer fmt.Println("relays.go:49")
 	//fmt.Println(input)
 	wait := deadlock.WaitGroup{}
 	failedRelays := make(chan string, len(input))
