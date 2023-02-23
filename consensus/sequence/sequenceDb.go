@@ -80,7 +80,7 @@ func (s *db) takeSnapshot() mindmachine.HashSeq {
 		mindmachine.LogCLI(err.Error(), 0)
 	}
 	//write the identity state to file under the current hash
-	database.Write("sequence", hs.Hash, b)
+	database.Write("sequence", "current", b)
 	return hs
 }
 
