@@ -101,6 +101,7 @@ func (s *db) takeSnapshot() mindmachine.HashSeq {
 	}
 	//write the identity state to file under the current hash
 	database.Write("identity", hs.Hash, b)
+	database.Write("identity", "current", b)
 	return hs
 }
 
