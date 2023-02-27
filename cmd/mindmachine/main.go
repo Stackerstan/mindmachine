@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/profile"
+
 	"github.com/sasha-s/go-deadlock"
 	"github.com/spf13/viper"
 	"mindmachine/consensus/messagepack"
@@ -28,7 +30,9 @@ func main() {
 	deadlock.Opts.DisableLockOrderDetection = true
 	deadlock.Opts.DeadlockTimeout = time.Millisecond * 30000
 	var f *os.File
-	//p := profile.Start(profile.CPUProfile, profile.ProfilePath("."), profile.NoShutdownHook)
+	dirname := fmt.Sprintf("../%d", time.Now().Unix())
+	os.MkdirAll(dirname, 0777)
+	p := profile.Start(profile.MemProfile, profile.ProfilePath(dirname), profile.NoShutdownHook)
 	if runtrace {
 		// Delve does a much better job than GDB for Golang.
 		// Profiling is useful for things like finding goroutines that have lost touch with reality.
@@ -114,7 +118,7 @@ func main() {
 		mindmachine.LogCLI(err.Error(), 3)
 	}
 	close(terminator)
-	//p.Stop()
+	p.Stop()
 	if delve {
 		//p.Stop()
 	}
