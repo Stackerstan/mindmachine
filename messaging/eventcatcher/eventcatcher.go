@@ -246,12 +246,14 @@ func fetchLatest640001() {
 			}
 		}
 		eventPackToRebuildFrom := unmarshalled[idHighestSequence]
+		var eventIdToRebuidFrom = idHighestSequence
 		if idHighestBlock != idHighestSequence {
 			fmt.Printf("\nHighest Sequence:\n%#v\n\nHighest Block: \n%#v\n", unmarshalled[idHighestSequence], unmarshalled[idHighestBlock])
 			if unmarshalled[idHighestSequence].Height < unmarshalled[idHighestBlock].Height {
 				mindmachine.LogCLI("We have conflicting kind 640001 events. This could be a sign of an attempt to repair damage caused by a bug, but it's also possible that Stackerstan is under some form of attack.", 2)
 				mindmachine.LogCLI("We are rebuilding from the eventpack with the highest block. Some events have been purged from Stackerstan's state, you better figure out why.", 2)
 				eventPackToRebuildFrom = unmarshalled[idHighestBlock]
+				eventIdToRebuidFrom = idHighestBlock
 			}
 		}
 		//idHighestSequence = "74e66d1a913f968c84a8afe176327ed91ac5bac92ef3c357c328ed04a1421cf7" //"edafbe657131fabc758f77a1fc7933a671b6fc542b97821235b98f7b8dd11f8e" //debug
@@ -260,7 +262,7 @@ func fetchLatest640001() {
 			alreadyCaughtUp = true
 		}
 		if eventPackToRebuildFrom.Height > mindmachine.CurrentState().Processing.Height && !alreadyCaughtUp {
-			mindmachine.LogCLI(fmt.Sprintf("Attempting to rebuild state from Event: %s at height %d", idHighestSequence, unmarshalled[idHighestSequence].Height), 4)
+			mindmachine.LogCLI(fmt.Sprintf("Attempting to rebuild state from EventID %s with OP_RETURN: %s at height %d", eventIdToRebuidFrom, eventPackToRebuildFrom.OpReturn, eventPackToRebuildFrom.Height), 4)
 			if orderedEventsToReplay, ok := nostrelay.FetchEventPack(eventPackToRebuildFrom.EventIDs); ok {
 				var failed bool
 				//todo add in any missing blocks between two block heights
@@ -391,7 +393,7 @@ func SubscribeToAllEvents(terminate chan struct{}, wg *sync.WaitGroup) {
 		}
 	}
 	pool := nostr.NewRelayPool()
-	mindmachine.LogCLI("Subscribing to Kind 1 Events", 3)
+	mindmachine.LogCLI("Subscribing to Events", 3)
 	relays := mindmachine.MakeOrGetConfig().GetStringSlice("relaysOptional")
 	relays = append(relays, mindmachine.MakeOrGetConfig().GetStringSlice("relaysMust")...)
 	for _, s := range relays {
@@ -597,41 +599,49 @@ func popVpss() []mindmachine.Event {
 
 var mm = &deadlock.Mutex{}
 
+var handled = make(map[string]int64)
+
 func handleEventInLiveMode(e mindmachine.Event) bool {
 	mm.Lock()
 	defer mm.Unlock()
-	if h, ok := e.Height(); ok {
-		if h == mindmachine.CurrentState().Processing.Height || h+1 == mindmachine.CurrentState().Processing.Height {
-			if hs, ok := conductor.HandleMessage(e); ok {
-				messagepack.PackMessage(e)
-				//todo if we are missing events when we go to fetch eventpacks, and the missing event is a VPSS, it's probably because the Mind reported that an event was successful even though the Mind-state did not get updated (i.e. the event triggered an update that has already happened in the past and the Mind didn't reject it). Possible solution: every Mind MUST report a failure unless the hashseq is different to the current state. Or maybe use a persistent bloom filter here and validate that the new hashseq is actually new.
+	if _, exists := handled[e.ID]; !exists {
+		handled[e.ID] = 1
+		if h, ok := e.Height(); ok {
+			if h == mindmachine.CurrentState().Processing.Height || h+1 == mindmachine.CurrentState().Processing.Height {
+				if hs, ok := conductor.HandleMessage(e); ok {
+					messagepack.PackMessage(e)
+					//todo if we are missing events when we go to fetch eventpacks, and the missing event is a VPSS, it's probably because the Mind reported that an event was successful even though the Mind-state did not get updated (i.e. the event triggered an update that has already happened in the past and the Mind didn't reject it). Possible solution: every Mind MUST report a failure unless the hashseq is different to the current state. Or maybe use a persistent bloom filter here and validate that the new hashseq is actually new.
 
-				if mind, ok := mindmachine.WhichMindForKind(e.Kind); ok && mind != "vpss" {
-					if hs.Mind != "shares" {
-						hs.NailedTo = shares.HashOfCurrentState() //or should we nail this to the latest >500 permille instead of just the latest?
-					}
-					sequence := sequence.GetSequence(mindmachine.MyWallet().Account)
-					hs.EventID = e.ID
-					if vpssEvent, vOk := hashSeqToSignedVPSS(hs, sequence+1); vOk {
-						localVpssEvent := mindmachine.ConvertToInternalEvent(&vpssEvent)
-						if !mindstate.RegisterState(localVpssEvent) {
-							mindmachine.LogCLI("this should not happen", 0)
+					if mind, ok := mindmachine.WhichMindForKind(e.Kind); ok && mind != "vpss" {
+						if hs.Mind != "shares" {
+							hs.NailedTo = shares.HashOfCurrentState() //or should we nail this to the latest >500 permille instead of just the latest?
 						}
-						if shares.VotePowerForAccount(mindmachine.MyWallet().Account) > 0 {
-							if _, lOk := conductor.HandleMessage(localVpssEvent); lOk {
-								nostrelay.PublishEvent(vpssEvent)
-								messagepack.PackMessage(localVpssEvent)
-							} else {
-								//todo move this error to vpss Mind so that we don't report failed vpss if it failed cause we've already signed it
-								fmt.Printf("\nOUR NEWLY CREATED VPSS FAILED\n%#v\n", vpssEvent)
-								//mindmachine.LogCLI("this should not happen: our VPSS failed locally", 0)
+						seq := sequence.GetSequence(mindmachine.MyWallet().Account)
+						hs.EventID = e.ID
+						if vpssEvent, vOk := hashSeqToSignedVPSS(hs, seq+1); vOk {
+							localVpssEvent := mindmachine.ConvertToInternalEvent(&vpssEvent)
+							if !mindstate.RegisterState(localVpssEvent) {
+								mindmachine.LogCLI("this should not happen", 0)
+							}
+							if shares.VotePowerForAccount(mindmachine.MyWallet().Account) > 0 {
+								if _, lOk := conductor.HandleMessage(localVpssEvent); lOk {
+									nostrelay.PublishEvent(vpssEvent)
+									messagepack.PackMessage(localVpssEvent)
+								} else {
+									//todo move this error to vpss Mind so that we don't report failed vpss if it failed cause we've already signed it
+									fmt.Printf("\nOUR NEWLY CREATED VPSS FAILED\n%#v\n", vpssEvent)
+									//mindmachine.LogCLI("this should not happen: our VPSS failed locally", 0)
+								}
 							}
 						}
 					}
+					return true
 				}
-				return true
 			}
 		}
+	} else {
+		handled[e.ID] = handled[e.ID] + 1
+		fmt.Sprintf("639: seen %s %d times", e.ID, handled[e.ID])
 	}
 	//todo handle messages for Scum Class Minds (does not have to be the right height or order)
 	//mindmachine.LogCLI(fmt.Sprintf("Failed %s of kind %d", e.ID, e.Kind), 3)
@@ -793,8 +803,16 @@ func handleEventPack(events []mindmachine.Event) (states []mindmachine.HashSeq) 
 					}
 				} else {
 					fmt.Printf("\n%#v\n", event)
-					mindmachine.LogCLI("event in messagepack failed, keep running \"make reset\" until it works (buggy)", 2)
-					mindmachine.Shutdown()
+					if true { //mind != "vpss" {
+						mindmachine.LogCLI("event in messagepack failed", 2)
+						if mindmachine.MakeOrGetConfig().GetBool("forceRebuildOfEventPack") && shares.VotePowerForAccount(mindmachine.MyWallet().Account) > 0 {
+							mindmachine.LogCLI("we are rebuilding the eventpack to repair the network", 2)
+						} else {
+							mindmachine.Shutdown()
+						}
+					} else {
+						mindmachine.LogCLI("a VPSS event in the messagepack failed, it's important to figure out how this happened", 2)
+					}
 				}
 			}
 		}

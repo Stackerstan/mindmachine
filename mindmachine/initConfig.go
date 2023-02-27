@@ -39,10 +39,10 @@ func InitConfig(config *viper.Viper) {
 	config.SetDefault("highly_reliable", false)
 	config.SetDefault("forceBlocks", false)
 	config.SetDefault("relaysMust", []string{"wss://nostr.688.org", "wss://15171031.688.org"})
-	if optionalRelays, ok := getOptionalRelays(); ok {
-		config.SetDefault("relaysOptional", optionalRelays)
-		config.Set("relaysOptional", optionalRelays)
-	}
+	//if optionalRelays, ok := getOptionalRelays(); ok {
+	//	config.SetDefault("relaysOptional", optionalRelays)
+	//	config.Set("relaysOptional", optionalRelays)
+	//}
 	// Create our working directory and config file if not exist
 	initRootDir(config)
 	Touch(config.GetString("rootDir") + "config.yaml")
