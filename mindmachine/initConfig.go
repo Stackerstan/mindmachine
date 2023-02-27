@@ -21,6 +21,7 @@ func InitConfig(config *viper.Viper) {
 		LogCLI(err.Error(), 4)
 	}
 	config.SetDefault("firstRun", true)
+	config.SetDefault("forceRebuildOfEventPack", false)
 	config.SetDefault("flatFileDir", "data/")
 	config.SetDefault("blockServer", "https://blockchain.info")
 	config.SetDefault("logLevel", 4)
