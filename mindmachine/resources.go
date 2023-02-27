@@ -38,7 +38,7 @@ func Banner() string {
 		"      ░█▀▀▀█ ▀▀█▀▀  █▀▀█ ░█▀▀█ ░█ ▄▀ ░█▀▀▀ ░█▀▀█ ░█▀▀▀█ ▀▀█▀▀  █▀▀█ ░█▄ ░█ \n" +
 		"       ▀▀▀▄▄  ░█   ░█▄▄█ ░█    ░█▀▄  ░█▀▀▀ ░█▄▄▀  ▀▀▀▄▄  ░█   ░█▄▄█ ░█░█░█ \n" +
 		"      ░█▄▄▄█  ░█   ░█ ░█ ░█▄▄█ ░█ ░█ ░█▄▄▄ ░█ ░█ ░█▄▄▄█  ░█   ░█ ░█ ░█  ▀█ \n" +
-		"             THE UNBREAKABLE PARALLEL CIVILISATION BUILT ON BITCOIN\n\n"
+		"              A PARALLEL CIVILISATION BUILT WITH BITCOIN AND NOSTR\n\n"
 }
 
 //convert your time into bitcoin
