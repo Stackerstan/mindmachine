@@ -3,6 +3,8 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"runtime/trace"
 	"strings"
@@ -24,6 +26,10 @@ import (
 )
 
 func main() {
+	defer profile.Start(profile.MemProfile).Stop()
+	go func() {
+		http.ListenAndServe(":8080", nil)
+	}()
 	mindmachine.SetMaxOpenFiles()
 	delve := false //problem: keep forgetting to turn this off after debug
 	runtrace := false
@@ -32,7 +38,7 @@ func main() {
 	var f *os.File
 	dirname := fmt.Sprintf("../%d", time.Now().Unix())
 	os.MkdirAll(dirname, 0777)
-	p := profile.Start(profile.MemProfile, profile.ProfilePath(dirname), profile.NoShutdownHook)
+	//p := profile.Start(profile.MemProfile, profile.ProfilePath(dirname), profile.NoShutdownHook)
 	if runtrace {
 		// Delve does a much better job than GDB for Golang.
 		// Profiling is useful for things like finding goroutines that have lost touch with reality.
@@ -118,7 +124,7 @@ func main() {
 		mindmachine.LogCLI(err.Error(), 3)
 	}
 	close(terminator)
-	p.Stop()
+	//p.Stop()
 	if delve {
 		//p.Stop()
 	}
