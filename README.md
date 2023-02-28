@@ -54,7 +54,11 @@ git pull upstream master //this grabs any code that has changed, you want to be 
 git push //update your remote fork with the changes you just pulled from upstream master
 ```
 5. Create a local branch on your machine `git checkout -b branch_name` (it's usually a good idea to call the branch something that describes the problem you are solving). _Never_ develop on the `master` branch, as the `master` branch is exclusively used to accept incoming changes from `upstream:master` and you'll run into problems if you try to use it for anything else.
-6. Solve the problem in the absolute most simple and fastest possible way with the smallest number of changes humanly possible. Tell other people what you're doing by putting _very clear and descriptive comments in your code_. When you think's it's solved, make sure you didn't break anything:
+6. Solve the problem in the absolute most simple and fastest possible way with the smallest number of changes humanly possible. Tell other people what you're doing by putting _very clear and descriptive comments in your code_. 
+
+To develp on "testnet" such that you don't damage mainnet with your experiments, edit the config file in `~/mindmachine/config.yaml` and set `donotpropagate` to `true`.
+
+When you think whatever problem you are solving is really solved, make sure you didn't break anything:
 ```
 make reset
 //And then verify that you successfully reproduce the latest state and reach the current Bitcoin tip height. 
