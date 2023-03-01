@@ -428,7 +428,7 @@ func SubscribeToAllEvents(terminate chan struct{}, wg *sync.WaitGroup) {
 				break L
 			case <-time.After(time.Second * 60):
 				unsub()
-				mindmachine.PruneDeadOptionalRelays()
+				//mindmachine.PruneDeadOptionalRelays()
 				go SubscribeToAllEvents(terminate, wg)
 				break L
 			}

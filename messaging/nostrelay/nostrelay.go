@@ -84,7 +84,7 @@ var startedRelays = false
 var publishQueue = make(chan nostr.Event)
 
 func startRelaysForPublishing() {
-	mindmachine.PruneDeadOptionalRelays()
+	//mindmachine.PruneDeadOptionalRelays()
 	relays := mindmachine.MakeOrGetConfig().GetStringSlice("relaysMust")
 	//relays = append(relays, mindmachine.MakeOrGetConfig().GetStringSlice("relaysOptional")...)
 	//pool := initRelays(relays)

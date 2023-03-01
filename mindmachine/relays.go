@@ -40,6 +40,10 @@ func pruneDeadRelays() {
 	}
 }
 
+func GetSomeRelays() ([]string, bool) {
+	return getOptionalRelays()
+}
+
 func Prune(input []string) (output []string) {
 	return prune(input)
 }
