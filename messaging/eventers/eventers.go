@@ -1,6 +1,6 @@
 // Package eventers lets us compose State from any Mind(s) into Events to be consumed by the interfarce.
-//all Events produce by the eventer are signed by our local wallet
-//events produced by this package MUST NOT be sent to relays (except maybe to fiatjaf's relays as punishment for branle)
+// all Events produce by the eventer are signed by our local wallet
+// events produced by this package MUST NOT be sent to relays (except maybe to fiatjaf's relays as punishment for branle)
 package eventers
 
 import (
@@ -419,6 +419,15 @@ func allIdentities() (e []nostr.Event) {
 		event.Sign(mindmachine.MyWallet().PrivateKey)
 		e = append(e, event)
 	}
+	event := nostr.Event{
+		PubKey:    mindmachine.MyWallet().Account,
+		CreatedAt: time.Now(),
+		Kind:      640497,
+		Content:   "",
+	}
+	event.ID = event.GetID()
+	event.Sign(mindmachine.MyWallet().PrivateKey)
+	e = append(e, event)
 	return
 }
 
